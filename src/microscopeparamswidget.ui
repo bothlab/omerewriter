@@ -20,760 +20,627 @@
    <property name="verticalSpacing">
     <number>12</number>
    </property>
-
-   <!-- LEFT COLUMN -->
    <item row="0" column="0">
-    <widget class="QWidget" name="leftColumn">
-     <layout class="QVBoxLayout" name="verticalLayout_left">
-      <property name="spacing">
-       <number>12</number>
-      </property>
-
-      <!-- Statistics -->
-      <item>
-       <widget class="QGroupBox" name="groupStatistics">
-        <property name="title">
-         <string>Statistics</string>
+    <layout class="QVBoxLayout" name="verticalLayout_left">
+     <property name="spacing">
+      <number>12</number>
+     </property>
+     <item>
+      <widget class="QGroupBox" name="groupStatistics">
+       <property name="title">
+        <string>Statistics</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_stats">
+        <property name="leftMargin">
+         <number>2</number>
         </property>
-        <layout class="QGridLayout" name="gridLayout_stats">
-         <property name="horizontalSpacing">
-          <number>10</number>
-         </property>
-         <property name="verticalSpacing">
-          <number>6</number>
-         </property>
-
-         <item row="0" column="0">
-          <widget class="QLabel" name="lblImageNameKey">
-           <property name="text">
-            <string>Image name:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1" colspan="2">
-          <widget class="QLabel" name="lblImageNameVal">
-           <property name="text">
-            <string>YE-003_FOVBrainTest_16x Z1.5um_PWR50_E920_000 01</string>
-           </property>
-           <property name="wordWrap">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-
-         <item row="1" column="0">
-          <widget class="QLabel" name="lblDimsKey">
-           <property name="text">
-            <string>Dimensions X, Y, Z:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1" colspan="2">
-          <widget class="QLabel" name="lblDimsVal">
-           <property name="text">
-            <string>2048×2048×4 (px)</string>
-           </property>
-          </widget>
-         </item>
-
-         <item row="2" column="0">
-          <widget class="QLabel" name="lblChannelsKey">
-           <property name="text">
-            <string>Number of channels:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1" colspan="2">
-          <widget class="QLabel" name="lblChannelsVal">
-           <property name="text">
-            <string>1</string>
-           </property>
-          </widget>
-         </item>
-
-         <item row="3" column="0">
-          <widget class="QLabel" name="lblTypeKey">
-           <property name="text">
-            <string>Type of data:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="3" column="1" colspan="2">
-          <widget class="QLabel" name="lblTypeVal">
-           <property name="text">
-            <string>16 bit signed integer</string>
-           </property>
-          </widget>
-         </item>
-
-         <item row="4" column="0">
-          <widget class="QLabel" name="lblSizeKey">
-           <property name="text">
-            <string>Image size:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1" colspan="2">
-          <widget class="QLabel" name="lblSizeVal">
-           <property name="text">
-            <string>32.0 MiB</string>
-           </property>
-          </widget>
-         </item>
-
-         <item row="5" column="0" colspan="3">
-          <widget class="QPushButton" name="btnConvertDimensions">
-           <property name="text">
-            <string>Convert dimensions</string>
-           </property>
-          </widget>
-         </item>
-
-         <item row="6" column="0" colspan="3">
-          <spacer name="spacer_statsBottom">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Expanding</enum>
-           </property>
-           <property name="sizeHint">
-            <size>
-             <width>20</width>
-             <height>10</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
-       </widget>
-      </item>
-
-      <!-- Sampling -->
-      <item>
-       <widget class="QGroupBox" name="groupSampling">
-        <property name="title">
-         <string>Sampling</string>
+        <property name="topMargin">
+         <number>2</number>
         </property>
-        <layout class="QGridLayout" name="gridLayout_sampling">
-         <property name="horizontalSpacing">
-          <number>10</number>
-         </property>
-         <property name="verticalSpacing">
-          <number>8</number>
-         </property>
-
-         <item row="0" column="0">
-          <widget class="QLabel" name="lblXnm">
-           <property name="text">
-            <string>X (nm)</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QDoubleSpinBox" name="spinXnm">
-           <property name="decimals">
-            <number>3</number>
-           </property>
-           <property name="maximum">
-            <double>1000000.000000000000000</double>
-           </property>
-           <property name="value">
-            <double>131.829000000000008</double>
-           </property>
-          </widget>
-         </item>
-
-         <item row="1" column="0">
-          <widget class="QLabel" name="lblYnm">
-           <property name="text">
-            <string>Y (nm)</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QDoubleSpinBox" name="spinYnm">
-           <property name="decimals">
-            <number>3</number>
-           </property>
-           <property name="maximum">
-            <double>1000000.000000000000000</double>
-           </property>
-           <property name="value">
-            <double>131.829000000000008</double>
-           </property>
-          </widget>
-         </item>
-
-         <item row="2" column="0">
-          <widget class="QLabel" name="lblZnm">
-           <property name="text">
-            <string>Z (nm)</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QDoubleSpinBox" name="spinZnm">
-           <property name="decimals">
-            <number>3</number>
-           </property>
-           <property name="maximum">
-            <double>1000000.000000000000000</double>
-           </property>
-           <property name="value">
-            <double>527.315000000000055</double>
-           </property>
-          </widget>
-         </item>
-
-         <item row="3" column="0" colspan="2">
-          <spacer name="spacer_samplingBottom">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Expanding</enum>
-           </property>
-           <property name="sizeHint">
-            <size>
-             <width>20</width>
-             <height>10</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
-       </widget>
-      </item>
-
-      <!-- Optical parameters -->
-      <item>
-       <widget class="QGroupBox" name="groupOptical">
-        <property name="title">
-         <string>Optical parameters</string>
+        <property name="rightMargin">
+         <number>2</number>
         </property>
-        <layout class="QGridLayout" name="gridLayout_optical">
-         <property name="horizontalSpacing">
-          <number>10</number>
-         </property>
-         <property name="verticalSpacing">
-          <number>8</number>
-         </property>
-
-         <item row="0" column="0">
-          <widget class="QLabel" name="lblNA">
-           <property name="text">
-            <string>Numerical aperture</string>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="1">
-          <widget class="QDoubleSpinBox" name="spinNA">
-           <property name="decimals">
-            <number>3</number>
-           </property>
-           <property name="maximum">
-            <double>2.000000000000000</double>
-           </property>
-           <property name="singleStep">
-            <double>0.010000000000000</double>
-           </property>
-           <property name="value">
-            <double>1.250000000000000</double>
-           </property>
-          </widget>
-         </item>
-
-         <item row="1" column="0" colspan="2">
-          <spacer name="spacer_opticalBottom">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Expanding</enum>
-           </property>
-           <property name="sizeHint">
-            <size>
-             <width>20</width>
-             <height>10</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-        </layout>
-       </widget>
-      </item>
-
-      <!-- Spherical aberration parameters -->
-      <item>
-       <widget class="QGroupBox" name="groupSpherical">
-        <property name="title">
-         <string>Spherical aberration parameters</string>
+        <property name="bottomMargin">
+         <number>4</number>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_spherical">
-         <item>
-          <widget class="QLabel" name="lblRefractiveIndexesTitle">
-           <property name="text">
-            <string>Refractive indexes:</string>
-           </property>
-          </widget>
-         </item>
-
-         <item>
-          <widget class="QWidget" name="sphericalGridWrap">
-           <layout class="QGridLayout" name="gridLayout_spherical">
-            <property name="horizontalSpacing">
-             <number>10</number>
+        <property name="horizontalSpacing">
+         <number>10</number>
+        </property>
+        <property name="verticalSpacing">
+         <number>6</number>
+        </property>
+        <item row="2" column="0">
+         <widget class="QLabel" name="lblChannelsKey">
+          <property name="text">
+           <string>Number of channels:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1" colspan="2">
+         <widget class="QLabel" name="lblImageNameVal">
+          <property name="text">
+           <string>No image loaded!</string>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1" colspan="2">
+         <widget class="QLabel" name="lblTypeVal">
+          <property name="text">
+           <string>16 bit signed integer</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1" colspan="2">
+         <widget class="QLabel" name="lblChannelsVal">
+          <property name="text">
+           <string>1</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="lblTypeKey">
+          <property name="text">
+           <string>Type of data:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="lblSizeKey">
+          <property name="text">
+           <string>Image size:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="lblImageNameKey">
+          <property name="text">
+           <string>Image name:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1" colspan="2">
+         <widget class="QLabel" name="lblDimsVal">
+          <property name="text">
+           <string>2048×2048×4 (px)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1" colspan="2">
+         <widget class="QLabel" name="lblSizeVal">
+          <property name="text">
+           <string>32.0 MiB</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="lblDimsKey">
+          <property name="text">
+           <string>Dimensions X, Y, Z:</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupSampling">
+       <property name="title">
+        <string>Sampling</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_sampling">
+        <property name="leftMargin">
+         <number>2</number>
+        </property>
+        <property name="topMargin">
+         <number>2</number>
+        </property>
+        <property name="rightMargin">
+         <number>2</number>
+        </property>
+        <property name="bottomMargin">
+         <number>2</number>
+        </property>
+        <property name="horizontalSpacing">
+         <number>10</number>
+        </property>
+        <property name="verticalSpacing">
+         <number>8</number>
+        </property>
+        <item row="2" column="1">
+         <widget class="QDoubleSpinBox" name="spinZnm">
+          <property name="decimals">
+           <number>3</number>
+          </property>
+          <property name="maximum">
+           <double>1000000.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>527.315000000000055</double>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="lblXnm">
+          <property name="text">
+           <string>X (nm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QDoubleSpinBox" name="spinYnm">
+          <property name="decimals">
+           <number>3</number>
+          </property>
+          <property name="maximum">
+           <double>1000000.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>131.829000000000008</double>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="lblZnm">
+          <property name="text">
+           <string>Z (nm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="lblYnm">
+          <property name="text">
+           <string>Y (nm)</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QDoubleSpinBox" name="spinXnm">
+          <property name="decimals">
+           <number>3</number>
+          </property>
+          <property name="maximum">
+           <double>1000000.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>131.829000000000008</double>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupOptical">
+       <property name="title">
+        <string>Optical parameters</string>
+       </property>
+       <layout class="QGridLayout" name="gridLayout_optical">
+        <property name="leftMargin">
+         <number>2</number>
+        </property>
+        <property name="topMargin">
+         <number>2</number>
+        </property>
+        <property name="rightMargin">
+         <number>2</number>
+        </property>
+        <property name="bottomMargin">
+         <number>2</number>
+        </property>
+        <property name="horizontalSpacing">
+         <number>10</number>
+        </property>
+        <property name="verticalSpacing">
+         <number>8</number>
+        </property>
+        <item row="0" column="1">
+         <widget class="QDoubleSpinBox" name="spinNA">
+          <property name="decimals">
+           <number>3</number>
+          </property>
+          <property name="maximum">
+           <double>2.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.010000000000000</double>
+          </property>
+          <property name="value">
+           <double>1.250000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="lblNA">
+          <property name="text">
+           <string>Numerical aperture</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="groupSpherical">
+       <property name="title">
+        <string>Spherical aberration parameters</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_spherical">
+        <property name="spacing">
+         <number>4</number>
+        </property>
+        <property name="leftMargin">
+         <number>2</number>
+        </property>
+        <property name="topMargin">
+         <number>2</number>
+        </property>
+        <property name="rightMargin">
+         <number>2</number>
+        </property>
+        <property name="bottomMargin">
+         <number>2</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="lblRefractiveIndexesTitle">
+          <property name="text">
+           <string>Refractive indexes:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="gridLayout_spherical">
+          <property name="horizontalSpacing">
+           <number>10</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>8</number>
+          </property>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="comboEmbedding">
+            <item>
+             <property name="text">
+              <string>Oil</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Water</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Air</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblLensImmersion">
+            <property name="text">
+             <string>Lens immersion</string>
             </property>
-            <property name="verticalSpacing">
-             <number>8</number>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboLensImmersion">
+            <item>
+             <property name="text">
+              <string>Oil</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Water</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Air</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblEmbeddingMed">
+            <property name="text">
+             <string>Embedding med.</string>
             </property>
-
-            <item row="0" column="0">
-             <widget class="QLabel" name="lblLensImmersion">
-              <property name="text">
-               <string>Lens immersion</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QComboBox" name="comboLensImmersion">
-              <item>
-               <property name="text">
-                <string>Oil</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Water</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Air</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item row="0" column="2">
-             <widget class="QDoubleSpinBox" name="spinLensRI">
-              <property name="decimals">
-               <number>3</number>
-              </property>
-              <property name="maximum">
-               <double>5.000000000000000</double>
-              </property>
-              <property name="value">
-               <double>1.515000000000000</double>
-              </property>
-             </widget>
-            </item>
-
-            <item row="1" column="0">
-             <widget class="QLabel" name="lblEmbeddingMed">
-              <property name="text">
-               <string>Embedding med.</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QComboBox" name="comboEmbedding">
-              <item>
-               <property name="text">
-                <string>Oil</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Water</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Air</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-            <item row="1" column="2">
-             <widget class="QDoubleSpinBox" name="spinEmbedRI">
-              <property name="decimals">
-               <number>3</number>
-              </property>
-              <property name="maximum">
-               <double>5.000000000000000</double>
-              </property>
-              <property name="value">
-               <double>1.515000000000000</double>
-              </property>
-             </widget>
-            </item>
-
-            <item row="2" column="0" colspan="3">
-             <widget class="QToolButton" name="btnSphericalAdvanced">
-              <property name="text">
-               <string>Advanced</string>
-              </property>
-              <property name="toolButtonStyle">
-               <enum>Qt::ToolButtonTextBesideIcon</enum>
-              </property>
-              <property name="arrowType">
-               <enum>Qt::RightArrow</enum>
-              </property>
-              <property name="checkable">
-               <bool>true</bool>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-      </item>
-
-      <item>
-       <spacer name="spacer_leftBottom">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeType">
-         <enum>QSizePolicy::Expanding</enum>
-        </property>
-        <property name="sizeHint">
-         <size>
-          <width>20</width>
-          <height>40</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-     </layout>
-    </widget>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QDoubleSpinBox" name="spinEmbedRI">
+            <property name="decimals">
+             <number>3</number>
+            </property>
+            <property name="maximum">
+             <double>5.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>1.515000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QDoubleSpinBox" name="spinLensRI">
+            <property name="decimals">
+             <number>3</number>
+            </property>
+            <property name="maximum">
+             <double>5.000000000000000</double>
+            </property>
+            <property name="value">
+             <double>1.515000000000000</double>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer_leftBottom">
+       <property name="orientation">
+        <enum>Qt::Orientation::Vertical</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Policy::Expanding</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>40</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
    </item>
-
-   <!-- RIGHT COLUMN -->
    <item row="0" column="1">
-    <widget class="QWidget" name="rightColumn">
-     <layout class="QVBoxLayout" name="verticalLayout_right">
-      <property name="spacing">
-       <number>12</number>
-      </property>
-
-      <item>
-       <widget class="QGroupBox" name="groupMicroscopeParams">
-        <property name="title">
-         <string>Microscope parameters</string>
+    <layout class="QVBoxLayout" name="verticalLayout_right">
+     <property name="spacing">
+      <number>12</number>
+     </property>
+     <item>
+      <widget class="QGroupBox" name="groupMicroscopeParams">
+       <property name="title">
+        <string>Microscope parameters</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_microscopeGroup">
+        <property name="spacing">
+         <number>10</number>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_microscopeGroup">
-         <property name="spacing">
-          <number>10</number>
-         </property>
-
-         <!-- Select channel -->
-         <item>
-          <widget class="QWidget" name="channelWrap">
-           <layout class="QVBoxLayout" name="verticalLayout_channelWrap">
-            <property name="spacing">
-             <number>6</number>
+        <property name="leftMargin">
+         <number>2</number>
+        </property>
+        <property name="topMargin">
+         <number>2</number>
+        </property>
+        <property name="rightMargin">
+         <number>2</number>
+        </property>
+        <property name="bottomMargin">
+         <number>2</number>
+        </property>
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_channelWrap">
+          <property name="spacing">
+           <number>6</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="lblSelectChannel">
+            <property name="text">
+             <string>Select channel:</string>
             </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QListWidget" name="listChannels">
             <item>
-             <widget class="QLabel" name="lblSelectChannel">
-              <property name="text">
-               <string>Select channel:</string>
-              </property>
-             </widget>
+             <property name="text">
+              <string>0: Confocal - Channel 0</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="gridLayout_microscopeType">
+          <property name="horizontalSpacing">
+           <number>10</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>8</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblMicroscopeType">
+            <property name="text">
+             <string>Microscope type</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboMicroscopeType">
+            <item>
+             <property name="text">
+              <string>Confocal</string>
+             </property>
             </item>
             <item>
-             <widget class="QListWidget" name="listChannels">
-              <property name="minimumHeight">
-               <number>110</number>
-              </property>
-              <item>
-               <property name="text">
-                <string>0: Confocal - Channel 0</string>
-               </property>
-              </item>
-             </widget>
+             <property name="text">
+              <string>Widefield</string>
+             </property>
             </item>
-           </layout>
-          </widget>
-         </item>
-
-         <!-- Microscope type + multiphoton -->
-         <item>
-          <widget class="QWidget" name="microscopeTypeWrap">
-           <layout class="QGridLayout" name="gridLayout_microscopeType">
-            <property name="horizontalSpacing">
-             <number>10</number>
+            <item>
+             <property name="text">
+              <string>Spinning disk</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblMultiPhoton">
+            <property name="text">
+             <string>Multi photon</string>
             </property>
-            <property name="verticalSpacing">
-             <number>8</number>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="chkMultiPhoton">
+            <property name="text">
+             <string/>
             </property>
-
-            <item row="0" column="0">
-             <widget class="QLabel" name="lblMicroscopeType">
-              <property name="text">
-               <string>Microscope type</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QComboBox" name="comboMicroscopeType">
-              <item>
-               <property name="text">
-                <string>Confocal</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Widefield</string>
-               </property>
-              </item>
-              <item>
-               <property name="text">
-                <string>Spinning disk</string>
-               </property>
-              </item>
-             </widget>
-            </item>
-
-            <item row="1" column="0">
-             <widget class="QLabel" name="lblMultiPhoton">
-              <property name="text">
-               <string>Multi photon</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QCheckBox" name="chkMultiPhoton">
-              <property name="text">
-               <string/>
-              </property>
-              <property name="checked">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-
-            <item row="2" column="0">
-             <widget class="QLabel" name="lblChannelLabel">
-              <property name="text">
-               <string>Channel label</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QLineEdit" name="editChannelLabel">
-              <property name="text">
-               <string>Channel 0</string>
-              </property>
-             </widget>
-            </item>
-
-           </layout>
-          </widget>
-         </item>
-
-         <!-- Key numeric fields -->
-         <item>
-          <widget class="QWidget" name="gridNumbersWrap">
-           <layout class="QGridLayout" name="gridLayout_numbers">
-            <property name="horizontalSpacing">
-             <number>10</number>
+            <property name="checked">
+             <bool>true</bool>
             </property>
-            <property name="verticalSpacing">
-             <number>8</number>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblChannelLabel">
+            <property name="text">
+             <string>Channel label</string>
             </property>
-
-            <item row="0" column="0">
-             <widget class="QLabel" name="lblPinhole">
-              <property name="text">
-               <string>Backprojected pinhole (nm)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QSpinBox" name="spinPinholeNm">
-              <property name="maximum">
-               <number>1000000</number>
-              </property>
-              <property name="value">
-               <number>280</number>
-              </property>
-             </widget>
-            </item>
-
-            <item row="1" column="0">
-             <widget class="QLabel" name="lblExcitation">
-              <property name="text">
-               <string>Excitation wavelength (nm)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="1">
-             <widget class="QSpinBox" name="spinExcitationNm">
-              <property name="maximum">
-               <number>5000</number>
-              </property>
-              <property name="value">
-               <number>488</number>
-              </property>
-             </widget>
-            </item>
-
-            <item row="2" column="0">
-             <widget class="QLabel" name="lblEmission">
-              <property name="text">
-               <string>Emission wavelength (nm)</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QSpinBox" name="spinEmissionNm">
-              <property name="maximum">
-               <number>5000</number>
-              </property>
-              <property name="value">
-               <number>520</number>
-              </property>
-             </widget>
-            </item>
-
-            <item row="3" column="0" colspan="2">
-             <widget class="QToolButton" name="btnAdvancedMicroscope">
-              <property name="text">
-               <string>Advanced</string>
-              </property>
-              <property name="toolButtonStyle">
-               <enum>Qt::ToolButtonTextBesideIcon</enum>
-              </property>
-              <property name="arrowType">
-               <enum>Qt::RightArrow</enum>
-              </property>
-              <property name="checkable">
-               <bool>true</bool>
-              </property>
-              <property name="checked">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-
-           </layout>
-          </widget>
-         </item>
-
-         <!-- Multi photon section -->
-         <item>
-          <widget class="QGroupBox" name="groupMultiphoton">
-           <property name="title">
-            <string>Multi photon:</string>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="editChannelLabel">
+            <property name="text">
+             <string>Channel 0</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="gridLayout_numbers">
+          <property name="horizontalSpacing">
+           <number>10</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>8</number>
+          </property>
+          <item row="2" column="1">
+           <widget class="QSpinBox" name="spinEmissionNm">
+            <property name="maximum">
+             <number>5000</number>
+            </property>
+            <property name="value">
+             <number>520</number>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblEmission">
+            <property name="text">
+             <string>Emission wavelength (nm)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QSpinBox" name="spinExcitationNm">
+            <property name="maximum">
+             <number>5000</number>
+            </property>
+            <property name="value">
+             <number>488</number>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="spinPinholeNm">
+            <property name="maximum">
+             <number>1000000</number>
+            </property>
+            <property name="value">
+             <number>280</number>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblExcitation">
+            <property name="text">
+             <string>Excitation wavelength (nm)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblPinhole">
+            <property name="text">
+             <string>Backprojected pinhole (nm)</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupMultiphoton">
+          <property name="title">
+           <string>Multi photon:</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_multiphoton">
+           <property name="horizontalSpacing">
+            <number>10</number>
            </property>
-           <layout class="QGridLayout" name="gridLayout_multiphoton">
-            <property name="horizontalSpacing">
-             <number>10</number>
-            </property>
-            <property name="verticalSpacing">
-             <number>8</number>
-            </property>
-
-            <item row="0" column="0">
-             <widget class="QLabel" name="lblPhotonCount">
-              <property name="text">
-               <string>Excitation photon count</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QSpinBox" name="spinPhotonCount">
-              <property name="minimum">
-               <number>1</number>
-              </property>
-              <property name="maximum">
-               <number>4</number>
-              </property>
-              <property name="value">
-               <number>2</number>
-              </property>
-             </widget>
-            </item>
-
-            <item row="1" column="0" colspan="2">
-             <spacer name="spacer_multiphotonBottom">
-              <property name="orientation">
-               <enum>Qt::Vertical</enum>
-              </property>
-              <property name="sizeType">
-               <enum>QSizePolicy::Expanding</enum>
-              </property>
-              <property name="sizeHint">
-               <size>
-                <width>20</width>
-                <height>10</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-           </layout>
-          </widget>
-         </item>
-
-         <item>
-          <spacer name="spacer_rightBottom">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
+           <property name="verticalSpacing">
+            <number>8</number>
            </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Expanding</enum>
-           </property>
-           <property name="sizeHint">
-            <size>
-             <width>20</width>
-             <height>40</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-
-        </layout>
-       </widget>
-      </item>
-
-      <item>
-       <spacer name="spacer_rightOuterBottom">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <property name="sizeType">
-         <enum>QSizePolicy::Expanding</enum>
-        </property>
-        <property name="sizeHint">
-         <size>
-          <width>20</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-
-     </layout>
-    </widget>
+           <item row="0" column="0">
+            <widget class="QLabel" name="lblPhotonCount">
+             <property name="text">
+              <string>Excitation photon count</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QSpinBox" name="spinPhotonCount">
+             <property name="minimum">
+              <number>1</number>
+             </property>
+             <property name="maximum">
+              <number>4</number>
+             </property>
+             <property name="value">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <spacer name="spacer_rightOuterBottom">
+       <property name="orientation">
+        <enum>Qt::Orientation::Vertical</enum>
+       </property>
+       <property name="sizeType">
+        <enum>QSizePolicy::Policy::Expanding</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
    </item>
-
-   <!-- Column stretch so it looks like two panes -->
    <item row="0" column="2">
     <spacer name="spacer_rightMargin">
      <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+      <enum>Qt::Orientation::Horizontal</enum>
      </property>
      <property name="sizeType">
-      <enum>QSizePolicy::Minimum</enum>
+      <enum>QSizePolicy::Policy::Minimum</enum>
      </property>
-     <property name="sizeHint">
+     <property name="sizeHint" stdset="0">
       <size>
        <width>0</width>
        <height>0</height>
@@ -781,11 +648,8 @@
      </property>
     </spacer>
    </item>
-
   </layout>
  </widget>
-
  <resources/>
  <connections/>
-
 </ui>
