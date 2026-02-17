@@ -21,7 +21,9 @@
 
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
-#include <opencv2/core.hpp>
+#include <memory>
+
+#include "ometiffreader.h"
 
 class ImageViewWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -31,8 +33,8 @@ public:
     ~ImageViewWidget() override;
 
 public slots:
-    bool showImage(const cv::Mat &mat);
-    [[nodiscard]] cv::Mat currentImage() const;
+    bool showImage(const RawImage &image);
+    [[nodiscard]] RawImage currentImage() const;
 
     void setMinimumSize(const QSize &size);
     void setHighlightSaturation(bool enabled);

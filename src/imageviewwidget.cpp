@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2024 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2016-2026 Matthias Klumpp <matthias@tenstral.net>
  *
  * Licensed under the GNU Lesser General Public License Version 3
  *
@@ -25,7 +25,6 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
-#include <opencv2/opencv.hpp>
 #include <cmath>
 #include <cstring>
 
@@ -106,14 +105,15 @@ public:
           textureId(0),
           textureWidth(0),
           textureHeight(0),
-          textureFormat(GL_RGB),
-          textureInternalFormat(GL_RGB),
+          textureFormat(GL_RED),
+          textureInternalFormat(GL_RED),
+          textureType(GL_UNSIGNED_BYTE),
           lastAspectRatio(-1.0f),
           lastHighlightSaturation(false),
           lastBgColor(-1.0f, -1.0f, -1.0f, -1.0f),
-          lastChannels(-1),
           pboIndex(0),
-          pboSize(0)
+          pboSize(0),
+          imageDataChanged(false)
     {
         pboIds[0] = pboIds[1] = 0;
     }
@@ -121,7 +121,7 @@ public:
     ~Private() = default;
 
     QVector4D bgColorVec;
-    cv::Mat glImage; // Image reference (possibly color-converted on GLES)
+    RawImage glImage; // Image data
 
     bool highlightSaturation;
 
@@ -135,43 +135,37 @@ public:
     int textureWidth, textureHeight;
     GLenum textureFormat;
     GLenum textureInternalFormat;
+    GLenum textureType;
 
     // Cache uniforms to avoid redundant updates
     float lastAspectRatio;
     bool lastHighlightSaturation;
     QVector4D lastBgColor;
-    int lastChannels;
 
     // Pixel Buffer Objects for async texture uploads
     GLuint pboIds[2]; // Double buffering
     int pboIndex;
     size_t pboSize;
+    bool imageDataChanged; // Flag to track when new image data needs immediate upload
 
-    void setupTextureFormat(int channels)
+    void setupTextureFormat(int channels, int bytesPerChannel)
     {
-        // Set internal format (same for both desktop GL and GLES)
+        // Set texture type based on bytes per channel
+        textureType = (bytesPerChannel == 2) ? GL_UNSIGNED_SHORT : GL_UNSIGNED_BYTE;
+
+        // Set internal format based on channels and bit depth
         switch (channels) {
         case 1:
-            textureInternalFormat = GL_RED;
             textureFormat = GL_RED;
+            textureInternalFormat = (bytesPerChannel == 2) ? GL_R16 : GL_R8;
             break;
         case 3:
-            textureInternalFormat = GL_RGB;
-#ifdef USE_GLES
-            // GLES doesn't support GL_BGR, so we ensure data is RGB beforehand
             textureFormat = GL_RGB;
-#else
-            textureFormat = GL_BGR;
-#endif
+            textureInternalFormat = (bytesPerChannel == 2) ? GL_RGB16 : GL_RGB8;
             break;
         default: // 4 channels
-            textureInternalFormat = GL_RGBA;
-#ifdef USE_GLES
-            // GLES doesn't support GL_BGRA
             textureFormat = GL_RGBA;
-#else
-            textureFormat = GL_BGRA;
-#endif
+            textureInternalFormat = (bytesPerChannel == 2) ? GL_RGBA16 : GL_RGBA8;
             break;
         }
     }
@@ -272,12 +266,13 @@ void ImageViewWidget::paintGL()
 
 void ImageViewWidget::renderImage()
 {
-    if (d->glImage.empty())
+    if (d->glImage.isEmpty())
         return;
 
-    const auto imgWidth = d->glImage.cols;
-    const auto imgHeight = d->glImage.rows;
-    const auto channels = d->glImage.channels();
+    const auto imgWidth = d->glImage.width;
+    const auto imgHeight = d->glImage.height;
+    const auto channels = d->glImage.channels;
+    const auto bytesPerChannel = d->glImage.bytesPerChannel;
 
     // Setup or recreate texture only when dimensions change
     if (d->textureId == 0 || d->textureWidth != imgWidth || d->textureHeight != imgHeight) {
@@ -293,9 +288,12 @@ void ImageViewWidget::renderImage()
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-        d->setupTextureFormat(channels);
+        d->setupTextureFormat(channels, bytesPerChannel);
         d->textureWidth = imgWidth;
         d->textureHeight = imgHeight;
+
+        // Set pixel unpack alignment (data is tightly packed)
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
         // Allocate texture storage
         glTexImage2D(
@@ -306,12 +304,12 @@ void ImageViewWidget::renderImage()
             imgHeight,
             0,
             d->textureFormat,
-            GL_UNSIGNED_BYTE,
+            d->textureType,
             nullptr);
 
         // Setup PBOs if available
         if (d->pboIds[0] != 0) {
-            const size_t dataSize = imgWidth * imgHeight * channels;
+            const size_t dataSize = d->glImage.dataSize();
             if (d->pboSize != dataSize) {
                 d->pboSize = dataSize;
                 glBindBuffer(GL_PIXEL_UNPACK_BUFFER, d->pboIds[0]);
@@ -327,22 +325,37 @@ void ImageViewWidget::renderImage()
 
     // Upload texture data
     if (d->pboIds[0] != 0) {
-        // Use PBO for asynchronous texture upload
-        d->pboIndex = (d->pboIndex + 1) % 2;
-        const int nextIndex = (d->pboIndex + 1) % 2;
+        // Check if we need immediate upload (new image data)
+        if (d->imageDataChanged) {
+            // Upload to both PBOs immediately to avoid one-frame delay
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, d->pboIds[0]);
+            glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, d->pboSize, d->glImage.data.constData());
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, d->pboIds[1]);
+            glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, d->pboSize, d->glImage.data.constData());
 
-        // Bind PBO to upload data from previous frame
-        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, d->pboIds[d->pboIndex]);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imgWidth, imgHeight, d->textureFormat, GL_UNSIGNED_BYTE, nullptr);
+            // Now upload from the current PBO
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imgWidth, imgHeight, d->textureFormat, d->textureType, nullptr);
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
-        // Bind next PBO and update data for next frame
-        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, d->pboIds[nextIndex]);
-        glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, d->pboSize, d->glImage.data);
-        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+            d->imageDataChanged = false;
+        } else {
+            // Use PBO double buffering for asynchronous texture upload
+            d->pboIndex = (d->pboIndex + 1) % 2;
+            const int nextIndex = (d->pboIndex + 1) % 2;
+
+            // Bind PBO to upload data from previous frame
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, d->pboIds[d->pboIndex]);
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, imgWidth, imgHeight, d->textureFormat, d->textureType, nullptr);
+
+            // Bind next PBO and update data for next frame
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, d->pboIds[nextIndex]);
+            glBufferSubData(GL_PIXEL_UNPACK_BUFFER, 0, d->pboSize, d->glImage.data.constData());
+            glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+        }
     } else {
         // Direct texture upload, if we have no PBO support
         glTexSubImage2D(
-            GL_TEXTURE_2D, 0, 0, 0, imgWidth, imgHeight, d->textureFormat, GL_UNSIGNED_BYTE, d->glImage.data);
+            GL_TEXTURE_2D, 0, 0, 0, imgWidth, imgHeight, d->textureFormat, d->textureType, d->glImage.data.constData());
     }
 
     // Render
@@ -351,11 +364,10 @@ void ImageViewWidget::renderImage()
     d->shaderProgram.bind();
 
     // Semi-static uniforms
-    if (d->lastBgColor != d->bgColorVec || d->lastChannels != channels) {
+    if (d->lastBgColor != d->bgColorVec) {
         d->shaderProgram.setUniformValue("bgColor", d->bgColorVec);
         d->shaderProgram.setUniformValue("isGrayscale", channels == 1 ? 1.0f : 0.0f);
         d->lastBgColor = d->bgColorVec;
-        d->lastChannels = channels;
     }
 
     // Only update uniforms when they change
@@ -379,34 +391,22 @@ void ImageViewWidget::renderImage()
     d->shaderProgram.release();
 }
 
-bool ImageViewWidget::showImage(const cv::Mat &mat)
+bool ImageViewWidget::showImage(const RawImage &image)
 {
-    if (mat.empty())
+    if (image.isEmpty())
         return false;
 
-#ifdef USE_GLES
-    // On GLES, we need to convert BGR/BGRA to RGB/RGBA on the CPU
-    // since GLES doesn't support GL_BGR/GL_BGRA formats
-    if (mat.channels() == 3) {
-        cv::cvtColor(mat, d->glImage, cv::COLOR_BGR2RGB);
-    } else if (mat.channels() == 4) {
-        cv::cvtColor(mat, d->glImage, cv::COLOR_BGRA2RGBA);
-    } else {
-        d->glImage = mat; // Grayscale or unknown, use as-is
-    }
-#else
-    // Store reference to the original image (its data *must* not be touched externally at this point,
-    // which it won't - but sadly OpenCV doesn't allow us to lock this matrix or describe immutability
-    // in the type system, so we need to assume all upstream components play nice).
-    // Fortunately, on desktop OpenGL, we can let the GPU handle BGR/BGRA conversion.
-    d->glImage = mat;
-#endif
+    d->glImage = image;
+
+    // Mark that image data has changed and needs immediate upload
+    d->imageDataChanged = true;
 
     update();
+
     return true;
 }
 
-cv::Mat ImageViewWidget::currentImage() const
+RawImage ImageViewWidget::currentImage() const
 {
     return d->glImage;
 }

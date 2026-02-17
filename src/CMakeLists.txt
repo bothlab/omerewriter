@@ -10,11 +10,16 @@ qt_add_executable(OMERewriter
         microscopeparamswidget.ui
         imageviewwidget.h
         imageviewwidget.cpp
+        ometiffreader.h
+        ometiffreader.cpp
 )
 
 target_include_directories(OMERewriter SYSTEM PRIVATE
         "${omefiles_SOURCE_DIR}/lib"
         "${omefiles_BINARY_DIR}/lib"
+)
+target_include_directories(OMERewriter PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 target_link_libraries(OMERewriter
         PRIVATE
