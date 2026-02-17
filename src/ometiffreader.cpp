@@ -11,6 +11,7 @@
 #include <cstring>
 
 #include <ome/files/in/OMETIFFReader.h>
+#include <ome/files/in/TIFFReader.h>
 #include <ome/files/PixelBuffer.h>
 #include <ome/files/VariantPixelBuffer.h>
 
@@ -81,8 +82,14 @@ bool OMETiffReader::open(const QString &filename)
     }
 
     try {
-        d->reader = std::make_shared<ome::files::in::OMETIFFReader>();
-        d->reader->setId(filename.toStdString());
+        if (filename.endsWith(".ome.tiff", Qt::CaseInsensitive) ||
+            filename.endsWith(".ome.tif", Qt::CaseInsensitive)) {
+            d->reader = std::make_shared<ome::files::in::OMETIFFReader>();
+            d->reader->setId(filename.toStdString());
+        } else {
+            d->reader = std::make_shared<ome::files::in::TIFFReader>();
+            d->reader->setId(filename.toStdString());
+        }
         d->currentFilename = filename;
         d->series = 0;
         d->resolution = 0;
