@@ -191,14 +191,14 @@ bool OMETiffImage::open(const QString &filename)
         d->updateCachedDimensions();
 
         qDebug() << "Opened OME-TIFF:" << filename;
-        qDebug() << "  Dimensions: X=" << d->sizeX << "Y=" << d->sizeY << "Z=" << d->sizeZ
-                 << "T=" << d->sizeT << "C=" << d->sizeC;
+        qDebug().nospace() << "  Dimensions: X=" << d->sizeX << "Y=" << d->sizeY << "Z=" << d->sizeZ << "T=" << d->sizeT
+                           << "C=" << d->sizeC;
         qDebug() << "  Image count:" << d->imageCount;
         qDebug() << "  RGB channel count:" << d->rgbChannelCount;
 
         return true;
     } catch (const std::exception &e) {
-        qWarning() << "Failed to open OME-TIFF:" << e.what();
+        qWarning().noquote() << "Failed to open OME-TIFF:" << e.what();
         d->reader.reset();
         return false;
     }
@@ -259,9 +259,8 @@ std::expected<bool, QString> OMETiffImage::setInterleavedChannelCount(dimension_
     d->interleavedChannels = channelCount;
     d->applyInterleavingInterpretation();
 
-    qDebug().noquote() << "Set interleaved channels to" << channelCount
-                       << "- Effective dimensions: Z=" << d->sizeZ << "C=" << d->sizeC
-                       << "T=" << d->sizeT;
+    qDebug().noquote() << "Set interleaved channels to" << channelCount << "- Effective dimensions: Z=" << d->sizeZ
+                       << "C=" << d->sizeC << "T=" << d->sizeT;
 
     return true;
 }
@@ -1086,7 +1085,7 @@ std::expected<bool, QString> OMETiffImage::saveWithMetadata(const QString &outpu
 
         writer->close();
 
-        qDebug().noquote() << "Successfully saved OME-TIFF with modified metadata to:" << outputPath;
+        qDebug() << "Successfully saved OME-TIFF with modified metadata to:" << outputPath;
         return true;
 
     } catch (const std::exception &e) {

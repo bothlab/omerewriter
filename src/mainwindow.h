@@ -30,6 +30,7 @@ private slots:
     void openFile();
     void saveFile();
     void saveFileAs();
+    void quickSaveFile();
     void updateImage();
     void onSliderZChanged(int value);
     void onSliderTChanged(int value);
@@ -40,6 +41,7 @@ private slots:
 private:
     void updateSliderRanges();
     void setNavigationEnabled(bool enabled);
+    void saveCurrentFile(bool quicksave);
 
     Ui::MainWindow *ui;
     std::unique_ptr<OMETiffImage> m_tiffImage;
