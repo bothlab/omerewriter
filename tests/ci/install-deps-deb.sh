@@ -19,4 +19,13 @@ eatmydata apt-get install -yq --no-install-recommends \
     gettext \
     libqt6opengl6-dev \
     libqt6svg6-dev \
-    qt6-base-dev
+    qt6-base-dev \
+    qt6-5compat-dev \
+    libgtest-dev \
+    libfmt-dev \
+    libspdlog-dev \
+    python3-six \
+    python3-genshi \
+    libboost-dev \
+    libtiff-dev \
+    libpng-dev
