@@ -858,6 +858,17 @@ bool OMETiffReader::saveWithMetadata(const QString &outputPath, const ImageMetad
         auto writer = std::make_shared<ome::files::out::OMETIFFWriter>();
         std::shared_ptr<ome::xml::meta::MetadataRetrieve> metaRetrieve = modifiedMeta;
         writer->setMetadataRetrieve(metaRetrieve);
+        // Always use BigTIFF format to support large files (>4GB)
+        writer->setBigTIFF(true);
+
+        // Use interleaved (contiguous) storage
+        writer->setInterleaved(true);
+
+        // Use zlib compression for smaller file sizes
+        // A warning is emitted for "Deflate", recommending to use "AdobeDeflate" instead for wider support,
+        // and claiming "Deflate" was legacy. So we just use "AdobeDeflate", it's the same algorithm.
+        writer->setCompression("AdobeDeflate");
+
         writer->setId(outputPath.toStdString());
 
         // Copy all planes from the source file
