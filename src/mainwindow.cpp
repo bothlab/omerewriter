@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Matthias Klumpp <matthias@tenstral.net>
+ * Copyright (C) 2025-2026 Matthias Klumpp <matthias@tenstral.net>
  *
  * SPDX-License-Identifier: LGPL-3.0-or-later
  */
@@ -7,6 +7,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "ometiffreader.h"
+#include "microscopeparamswidget.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -32,6 +33,8 @@ void MainWindow::setupConnections()
 {
     // Menu actions
     connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::openFile);
+    connect(ui->actionSave, &QAction::triggered, this, &MainWindow::saveFile);
+    connect(ui->actionSaveAs, &QAction::triggered, this, &MainWindow::saveFileAs);
 
     // Slider connections
     connect(ui->sliderZ, &QSlider::valueChanged, this, &MainWindow::onSliderZChanged);
@@ -46,6 +49,10 @@ void MainWindow::setupConnections()
     connect(ui->spinBoxZ, QOverload<int>::of(&QSpinBox::valueChanged), ui->sliderZ, &QSlider::setValue);
     connect(ui->spinBoxT, QOverload<int>::of(&QSpinBox::valueChanged), ui->sliderT, &QSlider::setValue);
     connect(ui->spinBoxC, QOverload<int>::of(&QSpinBox::valueChanged), ui->sliderC, &QSlider::setValue);
+
+    // Metadata modification tracking
+    connect(ui->imageMetaWidget, &MicroscopeParamsWidget::metadataModified,
+            this, &MainWindow::onMetadataModified);
 }
 
 void MainWindow::openFile()
@@ -105,6 +112,13 @@ void MainWindow::openFile()
     // Display the first image
     updateImage();
 
+    // Load and display metadata in the params widget
+    ImageMetadata metadata = m_reader->extractMetadata(0);
+    if (metadata.imageName.isEmpty()) {
+        metadata.imageName = fileInfo.fileName();
+    }
+    ui->imageMetaWidget->setMetadata(metadata);
+
     // Update status bar
     statusBar()->showMessage(
         tr("Loaded: %1 - Size: %2x%3, Z:%4 T:%5 C:%6")
@@ -114,6 +128,9 @@ void MainWindow::openFile()
             .arg(m_reader->sizeZ())
             .arg(m_reader->sizeT())
             .arg(m_reader->sizeC()));
+
+    ui->actionSave->setEnabled(true);
+    ui->actionSaveAs->setEnabled(true);
 }
 
 void MainWindow::updateSliderRanges()
@@ -183,24 +200,129 @@ void MainWindow::updateImage()
 
 void MainWindow::onSliderZChanged(int value)
 {
-    if (value != m_currentZ) {
-        m_currentZ = value;
-        updateImage();
-    }
+    if (value == m_currentZ)
+        return;
+
+    m_currentZ = value;
+    updateImage();
 }
 
 void MainWindow::onSliderTChanged(int value)
 {
-    if (value != m_currentT) {
-        m_currentT = value;
-        updateImage();
-    }
+    if (value == m_currentT)
+        return;
+
+    m_currentT = value;
+    updateImage();
 }
 
 void MainWindow::onSliderCChanged(int value)
 {
-    if (value != m_currentC) {
-        m_currentC = value;
-        updateImage();
+    if (value == m_currentC)
+        return;
+
+    m_currentC = value;
+    updateImage();
+}
+
+void MainWindow::saveFile()
+{
+    if (!m_reader->isOpen()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No file is currently open."));
+        return;
+    }
+
+    // For save (not save-as), we need to save to a temporary file and then replace
+    // because we can't write to a file that's currently open for reading
+    QString originalFile = m_reader->filename();
+    QString tempFile = originalFile + ".tmp.ome.tiff";
+
+    ImageMetadata metadata = ui->imageMetaWidget->getMetadata();
+
+    if (m_reader->saveWithMetadata(tempFile, metadata)) {
+        // Close the original file
+        m_reader->close();
+
+        // Replace original with temp file
+        QFile::remove(originalFile);
+        if (QFile::rename(tempFile, originalFile)) {
+            // Reopen the file
+            if (m_reader->open(originalFile)) {
+                ui->imageMetaWidget->resetModified();
+                statusBar()->showMessage(tr("Saved: %1").arg(originalFile), 5000);
+            } else {
+                QMessageBox::critical(this, tr("Error"), tr("Failed to reopen the saved file."));
+            }
+        } else {
+            QMessageBox::critical(this, tr("Error"), tr("Failed to replace the original file."));
+            // Try to recover by opening the temp file
+            if (QFile::exists(tempFile)) {
+                m_reader->open(tempFile);
+            }
+        }
+    } else {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to save the file."));
+        QFile::remove(tempFile);
+    }
+}
+
+void MainWindow::saveFileAs()
+{
+    if (!m_reader->isOpen()) {
+        QMessageBox::warning(this, tr("Warning"), tr("No file is currently open."));
+        return;
+    }
+
+    QString filename = QFileDialog::getSaveFileName(
+        this,
+        tr("Save OME-TIFF As"),
+        QString(),
+        tr("OME-TIFF Files (*.ome.tiff *.ome.tif);;All Files (*)"));
+
+    if (filename.isEmpty())
+        return;
+
+    // Ensure proper extension
+    if (!filename.endsWith(".ome.tiff", Qt::CaseInsensitive) &&
+        !filename.endsWith(".ome.tif", Qt::CaseInsensitive)) {
+        filename += ".ome.tiff";
+    }
+
+    ImageMetadata metadata = ui->imageMetaWidget->getMetadata();
+
+    if (m_reader->saveWithMetadata(filename, metadata)) {
+        ui->imageMetaWidget->resetModified();
+        statusBar()->showMessage(tr("Saved as: %1").arg(filename), 5000);
+
+        // Ask if user wants to open the newly saved file
+        auto result = QMessageBox::question(this, tr("Open Saved File"),
+            tr("Do you want to open the newly saved file?"),
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+
+        if (result == QMessageBox::Yes) {
+            m_reader->close();
+            if (m_reader->open(filename)) {
+                QFileInfo fileInfo(filename);
+                setWindowTitle(tr("OME-TIFF Viewer - %1").arg(fileInfo.fileName()));
+                updateSliderRanges();
+                updateImage();
+                ImageMetadata newMeta = m_reader->extractMetadata(0);
+                if (newMeta.imageName.isEmpty()) {
+                    newMeta.imageName = fileInfo.fileName();
+                }
+                ui->imageMetaWidget->setMetadata(newMeta);
+            }
+        }
+    } else {
+        QMessageBox::critical(this, tr("Error"), tr("Failed to save the file."));
+    }
+}
+
+void MainWindow::onMetadataModified()
+{
+    // Update window title to indicate unsaved changes
+    QString title = windowTitle();
+    if (!title.endsWith(" *")) {
+        setWindowTitle(title + " *");
     }
 }

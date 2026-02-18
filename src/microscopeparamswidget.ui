@@ -298,25 +298,6 @@
           <property name="verticalSpacing">
            <number>8</number>
           </property>
-          <item row="1" column="1">
-           <widget class="QComboBox" name="comboEmbedding">
-            <item>
-             <property name="text">
-              <string>Oil</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Water</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Air</string>
-             </property>
-            </item>
-           </widget>
-          </item>
           <item row="0" column="0">
            <widget class="QLabel" name="lblLensImmersion">
             <property name="text">
@@ -343,26 +324,6 @@
             </item>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="lblEmbeddingMed">
-            <property name="text">
-             <string>Embedding med.</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QDoubleSpinBox" name="spinEmbedRI">
-            <property name="decimals">
-             <number>3</number>
-            </property>
-            <property name="maximum">
-             <double>5.000000000000000</double>
-            </property>
-            <property name="value">
-             <double>1.515000000000000</double>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="2">
            <widget class="QDoubleSpinBox" name="spinLensRI">
             <property name="decimals">
@@ -373,6 +334,32 @@
             </property>
             <property name="value">
              <double>1.515000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="comboEmbedding">
+            <item>
+             <property name="text">
+              <string>Oil</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Water</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Air</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblEmbeddingMed">
+            <property name="text">
+             <string>Embedding med.</string>
             </property>
            </widget>
           </item>

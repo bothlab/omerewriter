@@ -11,6 +11,50 @@
 #include <memory>
 
 #include <ome/files/FormatReader.h>
+#include <ome/xml/meta/OMEXMLMetadata.h>
+
+/**
+ * @brief Structure to hold channel-specific microscopy parameters
+ */
+struct ChannelParams {
+    QString name; /// channel name
+    ome::xml::model::enums::AcquisitionMode acquisitionMode = ome::xml::model::enums::AcquisitionMode::OTHER;
+    double exWavelengthNm = 0;
+    double emWavelengthNm = 0;
+    double pinholeSizeNm = 0;
+    bool isMultiPhoton = false;
+    int photonCount = 1;
+};
+
+/**
+ * @brief Structure to hold image-level microscopy metadata
+ */
+struct ImageMetadata {
+    QString imageName;
+
+    // Dimensions
+    int sizeX = 0;
+    int sizeY = 0;
+    int sizeZ = 0;
+    int sizeC = 0;
+    int sizeT = 0;
+    QString pixelType;
+    size_t dataSizeBytes = 0;
+
+    // Physical sizes (in nm)
+    double physSizeXNm = 0;
+    double physSizeYNm = 0;
+    double physSizeZNm = 0;
+
+    // Optical parameters
+    double numericalAperture = 0;
+    ome::xml::model::enums::Immersion lensImmersion = ome::xml::model::enums::Immersion::WATER;
+    ome::xml::model::enums::Medium embeddingMedium = ome::xml::model::enums::Medium::WATER;
+    double immersionRI = 1.0;   /// Refractive index of the immersion medium
+
+    // Channel parameters
+    std::vector<ChannelParams> channels;
+};
 
 /**
  * @brief Simple struct to hold raw image data for display purposes.
@@ -122,6 +166,26 @@ public:
      * @brief Get the underlying reader.
      */
     [[nodiscard]] std::shared_ptr<ome::files::FormatReader> reader() const;
+
+    /**
+     * @brief Get the OME-XML metadata object.
+     */
+    [[nodiscard]] std::shared_ptr<ome::xml::meta::OMEXMLMetadata> omeMetadata() const;
+
+    /**
+     * @brief Extract metadata from the loaded file into a convenient structure.
+     * @param imageIndex The image/series index (default 0)
+     * @return ImageMetadata structure with extracted values
+     */
+    [[nodiscard]] ImageMetadata extractMetadata(dimension_size_type imageIndex = 0) const;
+
+    /**
+     * @brief Save the current file with modified metadata to a new location.
+     * @param outputPath Path for the output OME-TIFF file
+     * @param metadata Modified metadata to apply
+     * @return true if save was successful, false otherwise
+     */
+    bool saveWithMetadata(const QString &outputPath, const ImageMetadata &metadata);
 
 private:
     class Private;

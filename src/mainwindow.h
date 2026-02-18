@@ -27,10 +27,13 @@ public:
 
 private slots:
     void openFile();
+    void saveFile();
+    void saveFileAs();
     void updateImage();
     void onSliderZChanged(int value);
     void onSliderTChanged(int value);
     void onSliderCChanged(int value);
+    void onMetadataModified();
 
 private:
     void setupConnections();
