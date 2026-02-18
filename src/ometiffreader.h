@@ -113,6 +113,12 @@ public:
      */
     [[nodiscard]] QString filename() const;
 
+    /**
+     * @brief Check if the currently open file is an OME-TIFF.
+     * @return true if it's an OME-TIFF, false otherwise.
+     */
+    [[nodiscard]] bool isOmeTiff() const;
+
     // Dimension accessors
     [[nodiscard]] dimension_size_type sizeX() const;
     [[nodiscard]] dimension_size_type sizeY() const;

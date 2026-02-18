@@ -32,6 +32,7 @@ class OMETiffReader::Private
 public:
     std::shared_ptr<ome::files::FormatReader> reader;
     QString currentFilename;
+    bool isOmeTiff = true;
     dimension_size_type series = 0;
     dimension_size_type resolution = 0;
 
@@ -100,9 +101,11 @@ bool OMETiffReader::open(const QString &filename)
             // Now open the file - this will populate the metadata store
             omeReader->setId(filename.toStdString());
             d->reader = omeReader;
+            d->isOmeTiff = true;
         } else {
             d->reader = std::make_shared<ome::files::in::TIFFReader>();
             d->reader->setId(filename.toStdString());
+            d->isOmeTiff = false;
         }
         d->currentFilename = filename;
         d->series = 0;
@@ -146,6 +149,11 @@ bool OMETiffReader::isOpen() const
 QString OMETiffReader::filename() const
 {
     return d->currentFilename;
+}
+
+bool OMETiffReader::isOmeTiff() const
+{
+    return d->isOmeTiff;
 }
 
 dimension_size_type OMETiffReader::sizeX() const

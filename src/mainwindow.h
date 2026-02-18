@@ -37,7 +37,6 @@ private slots:
     void onMetadataModified();
 
 private:
-    void setupConnections();
     void updateSliderRanges();
     void setNavigationEnabled(bool enabled);
 
