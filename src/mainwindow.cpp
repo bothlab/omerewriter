@@ -14,9 +14,9 @@
 #include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
-    , m_reader(std::make_unique<OMETiffReader>(this))
+    : QMainWindow(parent),
+      ui(new Ui::MainWindow),
+      m_reader(std::make_unique<OMETiffReader>(this))
 {
     ui->setupUi(this);
 
@@ -51,8 +51,7 @@ void MainWindow::setupConnections()
     connect(ui->spinBoxC, QOverload<int>::of(&QSpinBox::valueChanged), ui->sliderC, &QSlider::setValue);
 
     // Metadata modification tracking
-    connect(ui->imageMetaWidget, &MicroscopeParamsWidget::metadataModified,
-            this, &MainWindow::onMetadataModified);
+    connect(ui->imageMetaWidget, &MicroscopeParamsWidget::metadataModified, this, &MainWindow::onMetadataModified);
 }
 
 void MainWindow::openFile()
@@ -67,8 +66,7 @@ void MainWindow::openFile()
         return;
 
     if (!m_reader->open(filename)) {
-        QMessageBox::critical(this, tr("Error"),
-                              tr("Failed to open file:\n%1").arg(filename));
+        QMessageBox::critical(this, tr("Error"), tr("Failed to open file:\n%1").arg(filename));
         return;
     }
 
@@ -120,14 +118,13 @@ void MainWindow::openFile()
     ui->imageMetaWidget->setMetadata(metadata);
 
     // Update status bar
-    statusBar()->showMessage(
-        tr("Loaded: %1 - Size: %2x%3, Z:%4 T:%5 C:%6")
-            .arg(fileInfo.fileName())
-            .arg(m_reader->sizeX())
-            .arg(m_reader->sizeY())
-            .arg(m_reader->sizeZ())
-            .arg(m_reader->sizeT())
-            .arg(m_reader->sizeC()));
+    statusBar()->showMessage(tr("Loaded: %1 - Size: %2x%3, Z:%4 T:%5 C:%6")
+                                 .arg(fileInfo.fileName())
+                                 .arg(m_reader->sizeX())
+                                 .arg(m_reader->sizeY())
+                                 .arg(m_reader->sizeZ())
+                                 .arg(m_reader->sizeT())
+                                 .arg(m_reader->sizeC()));
 
     ui->actionSave->setEnabled(true);
     ui->actionSaveAs->setEnabled(true);
@@ -190,8 +187,7 @@ void MainWindow::updateImage()
     RawImage image = m_reader->readPlane(m_currentZ, m_currentC, m_currentT);
 
     if (image.isEmpty()) {
-        qWarning() << "Failed to read plane at Z=" << m_currentZ
-                   << "T=" << m_currentT << "C=" << m_currentC;
+        qWarning() << "Failed to read plane at Z=" << m_currentZ << "T=" << m_currentT << "C=" << m_currentC;
         return;
     }
 
@@ -274,17 +270,13 @@ void MainWindow::saveFileAs()
     }
 
     QString filename = QFileDialog::getSaveFileName(
-        this,
-        tr("Save OME-TIFF As"),
-        QString(),
-        tr("OME-TIFF Files (*.ome.tiff *.ome.tif);;All Files (*)"));
+        this, tr("Save OME-TIFF As"), QString(), tr("OME-TIFF Files (*.ome.tiff *.ome.tif);;All Files (*)"));
 
     if (filename.isEmpty())
         return;
 
     // Ensure proper extension
-    if (!filename.endsWith(".ome.tiff", Qt::CaseInsensitive) &&
-        !filename.endsWith(".ome.tif", Qt::CaseInsensitive)) {
+    if (!filename.endsWith(".ome.tiff", Qt::CaseInsensitive) && !filename.endsWith(".ome.tif", Qt::CaseInsensitive)) {
         filename += ".ome.tiff";
     }
 
@@ -295,9 +287,12 @@ void MainWindow::saveFileAs()
         statusBar()->showMessage(tr("Saved as: %1").arg(filename), 5000);
 
         // Ask if user wants to open the newly saved file
-        auto result = QMessageBox::question(this, tr("Open Saved File"),
+        auto result = QMessageBox::question(
+            this,
+            tr("Open Saved File"),
             tr("Do you want to open the newly saved file?"),
-            QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::Yes);
 
         if (result == QMessageBox::Yes) {
             m_reader->close();

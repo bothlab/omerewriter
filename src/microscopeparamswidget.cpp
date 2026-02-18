@@ -12,8 +12,8 @@
 using namespace ome::xml::model;
 
 MicroscopeParamsWidget::MicroscopeParamsWidget(QWidget *parent)
-    : QWidget(parent)
-    , ui(new Ui::MicroscopeParamsWidget)
+    : QWidget(parent),
+      ui(new Ui::MicroscopeParamsWidget)
 {
     ui->setupUi(this);
 
@@ -34,48 +34,81 @@ MicroscopeParamsWidget::MicroscopeParamsWidget(QWidget *parent)
     clearMetadata();
 
     // Channel selection
-    connect(ui->listChannels, &QListWidget::currentRowChanged,
-            this, &MicroscopeParamsWidget::onChannelSelectionChanged);
+    connect(
+        ui->listChannels, &QListWidget::currentRowChanged, this, &MicroscopeParamsWidget::onChannelSelectionChanged);
 
     // Sampling parameters
-    connect(ui->spinXnm, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &MicroscopeParamsWidget::onMetadataFieldChanged);
-    connect(ui->spinYnm, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &MicroscopeParamsWidget::onMetadataFieldChanged);
-    connect(ui->spinZnm, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(
+        ui->spinXnm,
+        QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+        this,
+        &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(
+        ui->spinYnm,
+        QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+        this,
+        &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(
+        ui->spinZnm,
+        QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+        this,
+        &MicroscopeParamsWidget::onMetadataFieldChanged);
 
     // Optical parameters
-    connect(ui->spinNA, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(
+        ui->spinNA,
+        QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+        this,
+        &MicroscopeParamsWidget::onMetadataFieldChanged);
 
     // Spherical aberration parameters
-    connect(ui->comboLensImmersion, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &MicroscopeParamsWidget::onMetadataFieldChanged);
-    connect(ui->spinLensRI, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
-            this, &MicroscopeParamsWidget::onMetadataFieldChanged);
-    connect(ui->comboEmbedding, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(
+        ui->comboLensImmersion,
+        QOverload<int>::of(&QComboBox::currentIndexChanged),
+        this,
+        &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(
+        ui->spinLensRI,
+        QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+        this,
+        &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(
+        ui->comboEmbedding,
+        QOverload<int>::of(&QComboBox::currentIndexChanged),
+        this,
+        &MicroscopeParamsWidget::onMetadataFieldChanged);
 
     // Microscope parameters (channel-specific)
-    connect(ui->comboMicroscopeType, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &MicroscopeParamsWidget::onMetadataFieldChanged);
-    connect(ui->chkMultiPhoton, &QCheckBox::toggled,
-            this, &MicroscopeParamsWidget::onMetadataFieldChanged);
-    connect(ui->editChannelLabel, &QLineEdit::textChanged,
-            this, &MicroscopeParamsWidget::onMetadataFieldChanged);
-    connect(ui->spinPinholeNm, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &MicroscopeParamsWidget::onMetadataFieldChanged);
-    connect(ui->spinExcitationNm, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &MicroscopeParamsWidget::onMetadataFieldChanged);
-    connect(ui->spinEmissionNm, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &MicroscopeParamsWidget::onMetadataFieldChanged);
-    connect(ui->spinPhotonCount, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(
+        ui->comboMicroscopeType,
+        QOverload<int>::of(&QComboBox::currentIndexChanged),
+        this,
+        &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(ui->chkMultiPhoton, &QCheckBox::toggled, this, &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(ui->editChannelLabel, &QLineEdit::textChanged, this, &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(
+        ui->spinPinholeNm,
+        QOverload<int>::of(&QSpinBox::valueChanged),
+        this,
+        &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(
+        ui->spinExcitationNm,
+        QOverload<int>::of(&QSpinBox::valueChanged),
+        this,
+        &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(
+        ui->spinEmissionNm,
+        QOverload<int>::of(&QSpinBox::valueChanged),
+        this,
+        &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(
+        ui->spinPhotonCount,
+        QOverload<int>::of(&QSpinBox::valueChanged),
+        this,
+        &MicroscopeParamsWidget::onMetadataFieldChanged);
 
     // Update channel label in list when changed
-    connect(ui->editChannelLabel, &QLineEdit::textChanged,
-            this, &MicroscopeParamsWidget::updateChannelInList);
+    connect(ui->editChannelLabel, &QLineEdit::textChanged, this, &MicroscopeParamsWidget::updateChannelInList);
 }
 
 MicroscopeParamsWidget::~MicroscopeParamsWidget()
@@ -91,8 +124,7 @@ void MicroscopeParamsWidget::setMetadata(const ImageMetadata &metadata)
 
     // Statistics group
     ui->lblImageNameVal->setText(metadata.imageName.isEmpty() ? tr("No image loaded!") : metadata.imageName);
-    ui->lblDimsVal->setText(QString("%1×%2×%3 (px)")
-        .arg(metadata.sizeX).arg(metadata.sizeY).arg(metadata.sizeZ));
+    ui->lblDimsVal->setText(QString("%1×%2×%3 (px)").arg(metadata.sizeX).arg(metadata.sizeY).arg(metadata.sizeZ));
     ui->lblChannelsVal->setText(QString::number(metadata.sizeC));
     ui->lblTypeVal->setText(metadata.pixelType);
     ui->lblSizeVal->setText(formatDataSize(metadata.dataSizeBytes));
@@ -116,10 +148,7 @@ void MicroscopeParamsWidget::setMetadata(const ImageMetadata &metadata)
     ui->listChannels->clear();
     for (size_t i = 0; i < metadata.channels.size(); ++i) {
         const auto &ch = metadata.channels[i];
-        QString itemText = QString("%1: %2 - %3")
-            .arg(i)
-            .arg(std::string(ch.acquisitionMode))
-            .arg(ch.name);
+        QString itemText = QString("%1: %2 - %3").arg(i).arg(std::string(ch.acquisitionMode)).arg(ch.name);
         ui->listChannels->addItem(itemText);
     }
 
@@ -242,12 +271,10 @@ void MicroscopeParamsWidget::updateChannelInList()
 
     int row = m_currentChannel;
     if (row >= 0 && row < ui->listChannels->count()) {
-        const auto acqMode = enums::AcquisitionMode(enums::AcquisitionMode::enum_value(ui->comboMicroscopeType->currentData().toInt()));
+        const auto acqMode = enums::AcquisitionMode(
+            enums::AcquisitionMode::enum_value(ui->comboMicroscopeType->currentData().toInt()));
 
-        QString itemText = QString("%1: %2 - %3")
-            .arg(row)
-            .arg(std::string(acqMode))
-            .arg(ui->editChannelLabel->text());
+        QString itemText = QString("%1: %2 - %3").arg(row).arg(std::string(acqMode)).arg(ui->editChannelLabel->text());
         ui->listChannels->item(row)->setText(itemText);
     }
 }

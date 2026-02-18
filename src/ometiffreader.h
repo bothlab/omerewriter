@@ -50,7 +50,7 @@ struct ImageMetadata {
     double numericalAperture = 0;
     ome::xml::model::enums::Immersion lensImmersion = ome::xml::model::enums::Immersion::WATER;
     ome::xml::model::enums::Medium embeddingMedium = ome::xml::model::enums::Medium::WATER;
-    double immersionRI = 1.0;   /// Refractive index of the immersion medium
+    double immersionRI = 1.0; /// Refractive index of the immersion medium
 
     // Channel parameters
     std::vector<ChannelParams> channels;
@@ -60,14 +60,20 @@ struct ImageMetadata {
  * @brief Simple struct to hold raw image data for display purposes.
  */
 struct RawImage {
-    QByteArray data;       /// Raw pixel data
-    int width = 0;         /// Image width in pixels
-    int height = 0;        /// Image height in pixels
-    int channels = 1;      /// Number of channels (1=grayscale, 3=RGB, 4=RGBA)
+    QByteArray data;         /// Raw pixel data
+    int width = 0;           /// Image width in pixels
+    int height = 0;          /// Image height in pixels
+    int channels = 1;        /// Number of channels (1=grayscale, 3=RGB, 4=RGBA)
     int bytesPerChannel = 1; /// Bytes per channel (1=8-bit, 2=16-bit)
 
-    [[nodiscard]] bool isEmpty() const { return data.isEmpty() || width == 0 || height == 0; }
-    [[nodiscard]] size_t dataSize() const { return static_cast<size_t>(width) * height * channels * bytesPerChannel; }
+    [[nodiscard]] bool isEmpty() const
+    {
+        return data.isEmpty() || width == 0 || height == 0;
+    }
+    [[nodiscard]] size_t dataSize() const
+    {
+        return static_cast<size_t>(width) * height * channels * bytesPerChannel;
+    }
 };
 
 /**
@@ -136,9 +142,8 @@ public:
      * @param t Time position
      * @return Plane index
      */
-    [[nodiscard]] dimension_size_type getIndex(dimension_size_type z,
-                                                dimension_size_type c,
-                                                dimension_size_type t) const;
+    [[nodiscard]] dimension_size_type getIndex(dimension_size_type z, dimension_size_type c, dimension_size_type t)
+        const;
 
     /**
      * @brief Read a specific plane and return as RawImage for display.
@@ -151,9 +156,7 @@ public:
      * @param t Time position
      * @return RawImage containing the plane data
      */
-    [[nodiscard]] RawImage readPlane(dimension_size_type z,
-                                      dimension_size_type c,
-                                      dimension_size_type t);
+    [[nodiscard]] RawImage readPlane(dimension_size_type z, dimension_size_type c, dimension_size_type t);
 
     /**
      * @brief Read a plane by its index.

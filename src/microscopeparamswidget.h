@@ -9,7 +9,8 @@
 #include <QWidget>
 #include "ometiffreader.h"
 
-namespace Ui {
+namespace Ui
+{
 class MicroscopeParamsWidget;
 }
 
@@ -69,5 +70,5 @@ private:
     ImageMetadata m_metadata;
     int m_currentChannel = -1;
     bool m_modified = false;
-    bool m_updatingUI = false;  // Prevent recursive updates
+    bool m_updatingUI = false; // Prevent recursive updates
 };
