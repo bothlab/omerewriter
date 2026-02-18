@@ -9,7 +9,7 @@
 #include <QMainWindow>
 #include <memory>
 
-class OMETiffReader;
+class OMETiffImage;
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -35,13 +35,14 @@ private slots:
     void onSliderTChanged(int value);
     void onSliderCChanged(int value);
     void onMetadataModified();
+    void onInterleavedChannelsChanged(int count);
 
 private:
     void updateSliderRanges();
     void setNavigationEnabled(bool enabled);
 
     Ui::MainWindow *ui;
-    std::unique_ptr<OMETiffReader> m_reader;
+    std::unique_ptr<OMETiffImage> m_tiffImage;
 
     // Current position in the image stack
     int m_currentZ = 0;

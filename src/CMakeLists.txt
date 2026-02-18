@@ -10,8 +10,8 @@ qt_add_executable(OMERewriter
         microscopeparamswidget.ui
         imageviewwidget.h
         imageviewwidget.cpp
-        ometiffreader.h
-        ometiffreader.cpp
+        ometiffimage.h
+        ometiffimage.cpp
 )
 
 target_include_directories(OMERewriter SYSTEM PRIVATE
@@ -28,8 +28,6 @@ target_link_libraries(OMERewriter
         Qt::OpenGLWidgets
         OME::Files
 )
-
-
 
 install(TARGETS OMERewriter
         BUNDLE  DESTINATION .

@@ -6,7 +6,7 @@
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "ometiffreader.h"
+#include "ometiffimage.h"
 #include "microscopeparamswidget.h"
 
 #include <QFileDialog>
@@ -16,7 +16,7 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       ui(new Ui::MainWindow),
-      m_reader(std::make_unique<OMETiffReader>(this))
+      m_tiffImage(std::make_unique<OMETiffImage>(this))
 {
     ui->setupUi(this);
 
@@ -42,9 +42,20 @@ MainWindow::MainWindow(QWidget *parent)
     // Metadata modification tracking
     connect(ui->imageMetaWidget, &MicroscopeParamsWidget::metadataModified, this, &MainWindow::onMetadataModified);
 
+    // TIFF interpretation controls
+    connect(
+        ui->spinCInterleaveCount,
+        QOverload<int>::of(&QSpinBox::valueChanged),
+        this,
+        &MainWindow::onInterleavedChannelsChanged);
+
     // Default state
     setNavigationEnabled(false);
     ui->groupTiffInterpretation->setEnabled(false);
+
+    // Set default range for interleave count (1 = no interleaving)
+    ui->spinCInterleaveCount->setRange(1, 32);
+    ui->spinCInterleaveCount->setValue(1);
 }
 
 MainWindow::~MainWindow()
@@ -58,12 +69,14 @@ void MainWindow::openFile()
         this,
         QStringLiteral("Open TIFF Image"),
         QString(),
-        QStringLiteral("All TIFF Files (*.ome.tiff *.ome.tif *.tiff *.tif);;OME-TIFF Files (*.ome.tiff *.ome.tif);;TIFF Files (*.tiff *.tif);;All Files (*)"));
+        QStringLiteral(
+            "All TIFF Files (*.ome.tiff *.ome.tif *.tiff *.tif);;OME-TIFF Files (*.ome.tiff *.ome.tif);;TIFF Files "
+            "(*.tiff *.tif);;All Files (*)"));
 
     if (filename.isEmpty())
         return;
 
-    if (!m_reader->open(filename)) {
+    if (!m_tiffImage->open(filename)) {
         QMessageBox::critical(this, QStringLiteral("Error"), QStringLiteral("Failed to open file:\n%1").arg(filename));
         return;
     }
@@ -109,7 +122,7 @@ void MainWindow::openFile()
     updateImage();
 
     // Load and display metadata in the params widget
-    ImageMetadata metadata = m_reader->extractMetadata(0);
+    ImageMetadata metadata = m_tiffImage->extractMetadata(0);
     if (metadata.imageName.isEmpty()) {
         metadata.imageName = fileInfo.fileName();
     }
@@ -118,27 +131,27 @@ void MainWindow::openFile()
     // Update status bar
     statusBar()->showMessage(QStringLiteral("Loaded: %1 - Size: %2x%3, Z:%4 T:%5 C:%6")
                                  .arg(fileInfo.fileName())
-                                 .arg(m_reader->sizeX())
-                                 .arg(m_reader->sizeY())
-                                 .arg(m_reader->sizeZ())
-                                 .arg(m_reader->sizeT())
-                                 .arg(m_reader->sizeC()));
+                                 .arg(m_tiffImage->sizeX())
+                                 .arg(m_tiffImage->sizeY())
+                                 .arg(m_tiffImage->sizeZ())
+                                 .arg(m_tiffImage->sizeT())
+                                 .arg(m_tiffImage->sizeC()));
 
     ui->actionSave->setEnabled(true);
     ui->actionSaveAs->setEnabled(true);
 
     // we only allow rewriting / deinterleave if we *didn't* load an OME-TIFF
-    ui->groupTiffInterpretation->setEnabled(!m_reader->isOmeTiff());
+    ui->groupTiffInterpretation->setEnabled(!m_tiffImage->isOmeTiff());
 }
 
 void MainWindow::updateSliderRanges()
 {
-    if (!m_reader->isOpen())
+    if (!m_tiffImage->isOpen())
         return;
 
-    auto sizeZ = m_reader->sizeZ();
-    auto sizeT = m_reader->sizeT();
-    auto sizeC = m_reader->sizeC();
+    auto sizeZ = m_tiffImage->sizeZ();
+    auto sizeT = m_tiffImage->sizeT();
+    auto sizeC = m_tiffImage->sizeC();
 
     // Set slider ranges (0-based indexing)
     ui->sliderZ->setRange(0, qMax(0, static_cast<int>(sizeZ) - 1));
@@ -182,10 +195,10 @@ void MainWindow::setNavigationEnabled(bool enabled)
 
 void MainWindow::updateImage()
 {
-    if (!m_reader->isOpen())
+    if (!m_tiffImage->isOpen())
         return;
 
-    RawImage image = m_reader->readPlane(m_currentZ, m_currentC, m_currentT);
+    RawImage image = m_tiffImage->readPlane(m_currentZ, m_currentC, m_currentT);
 
     if (image.isEmpty()) {
         qWarning() << "Failed to read plane at Z=" << m_currentZ << "T=" << m_currentT << "C=" << m_currentC;
@@ -224,54 +237,60 @@ void MainWindow::onSliderCChanged(int value)
 
 void MainWindow::saveFile()
 {
-    if (!m_reader->isOpen()) {
+    if (!m_tiffImage->isOpen()) {
         QMessageBox::warning(this, QStringLiteral("Warning"), QStringLiteral("No file is currently open."));
         return;
     }
 
     // For save (not save-as), we need to save to a temporary file and then replace
     // because we can't write to a file that's currently open for reading
-    QString originalFile = m_reader->filename();
+    QString originalFile = m_tiffImage->filename();
     QString tempFile = originalFile + ".tmp.ome.tiff";
 
     ImageMetadata metadata = ui->imageMetaWidget->getMetadata();
 
-    if (m_reader->saveWithMetadata(tempFile, metadata)) {
+    auto r = m_tiffImage->saveWithMetadata(tempFile, metadata);
+    if (r) {
         // Close the original file
-        m_reader->close();
+        m_tiffImage->close();
 
         // Replace original with temp file
         QFile::remove(originalFile);
         if (QFile::rename(tempFile, originalFile)) {
             // Reopen the file
-            if (m_reader->open(originalFile)) {
+            if (m_tiffImage->open(originalFile)) {
                 ui->imageMetaWidget->resetModified();
                 statusBar()->showMessage(QStringLiteral("Saved: %1").arg(originalFile), 5000);
             } else {
-                QMessageBox::critical(this, QStringLiteral("Error"), QStringLiteral("Failed to reopen the saved file."));
+                QMessageBox::critical(
+                    this, QStringLiteral("Error"), QStringLiteral("Failed to reopen the saved file."));
             }
         } else {
-            QMessageBox::critical(this, QStringLiteral("Error"), QStringLiteral("Failed to replace the original file."));
+            QMessageBox::critical(
+                this, QStringLiteral("Error"), QStringLiteral("Failed to replace the original file."));
             // Try to recover by opening the temp file
             if (QFile::exists(tempFile)) {
-                m_reader->open(tempFile);
+                m_tiffImage->open(tempFile);
             }
         }
     } else {
-        QMessageBox::critical(this, QStringLiteral("Error"), QStringLiteral("Failed to save the file."));
+        QMessageBox::critical(this, QStringLiteral("Failed to save TIFF file"), r.error());
         QFile::remove(tempFile);
     }
 }
 
 void MainWindow::saveFileAs()
 {
-    if (!m_reader->isOpen()) {
+    if (!m_tiffImage->isOpen()) {
         QMessageBox::warning(this, QStringLiteral("Warning"), QStringLiteral("No file is currently open."));
         return;
     }
 
     QString filename = QFileDialog::getSaveFileName(
-        this, QStringLiteral("Save OME-TIFF As"), QString(), QStringLiteral("OME-TIFF Files (*.ome.tiff *.ome.tif);;All Files (*)"));
+        this,
+        QStringLiteral("Save OME-TIFF As"),
+        QString(),
+        QStringLiteral("OME-TIFF Files (*.ome.tiff *.ome.tif);;All Files (*)"));
 
     if (filename.isEmpty())
         return;
@@ -282,7 +301,8 @@ void MainWindow::saveFileAs()
 
     ImageMetadata metadata = ui->imageMetaWidget->getMetadata();
 
-    if (m_reader->saveWithMetadata(filename, metadata)) {
+    auto r = m_tiffImage->saveWithMetadata(filename, metadata);
+    if (r) {
         ui->imageMetaWidget->resetModified();
         statusBar()->showMessage(QStringLiteral("Saved as: %1").arg(filename), 5000);
 
@@ -295,13 +315,13 @@ void MainWindow::saveFileAs()
             QMessageBox::Yes);
 
         if (result == QMessageBox::Yes) {
-            m_reader->close();
-            if (m_reader->open(filename)) {
+            m_tiffImage->close();
+            if (m_tiffImage->open(filename)) {
                 QFileInfo fileInfo(filename);
                 setWindowTitle(QStringLiteral("OMERewriter - %1").arg(fileInfo.fileName()));
                 updateSliderRanges();
                 updateImage();
-                ImageMetadata newMeta = m_reader->extractMetadata(0);
+                ImageMetadata newMeta = m_tiffImage->extractMetadata(0);
                 if (newMeta.imageName.isEmpty()) {
                     newMeta.imageName = fileInfo.fileName();
                 }
@@ -309,7 +329,7 @@ void MainWindow::saveFileAs()
             }
         }
     } else {
-        QMessageBox::critical(this, QStringLiteral("Error"), QStringLiteral("Failed to save the file."));
+        QMessageBox::critical(this, QStringLiteral("Failed to save TIFF file"), r.error());
     }
 }
 
@@ -319,4 +339,69 @@ void MainWindow::onMetadataModified()
     QString title = windowTitle();
     if (!title.endsWith(" *"))
         setWindowTitle(title + " *");
+}
+
+void MainWindow::onInterleavedChannelsChanged(int count)
+{
+    if (!m_tiffImage->isOpen() || m_tiffImage->isOmeTiff())
+        return;
+
+    // Apply the new interleaved channel count
+    auto r = m_tiffImage->setInterleavedChannelCount(static_cast<OMETiffImage::dimension_size_type>(count));
+    if (!r) {
+        QMessageBox::warning(this, QStringLiteral("Invalid Interleaved Channel Count"), r.error());
+        // Reset to previous valid value
+        ui->spinCInterleaveCount->blockSignals(true);
+        ui->spinCInterleaveCount->setValue(m_tiffImage->interleavedChannelCount());
+        ui->spinCInterleaveCount->blockSignals(false);
+        return;
+    }
+
+    // Reset current position
+    m_currentZ = 0;
+    m_currentT = 0;
+    m_currentC = 0;
+
+    // Update slider ranges based on new interpretation
+    updateSliderRanges();
+
+    // Reset sliders
+    ui->sliderZ->blockSignals(true);
+    ui->sliderT->blockSignals(true);
+    ui->sliderC->blockSignals(true);
+    ui->spinBoxZ->blockSignals(true);
+    ui->spinBoxT->blockSignals(true);
+    ui->spinBoxC->blockSignals(true);
+
+    ui->sliderZ->setValue(0);
+    ui->sliderT->setValue(0);
+    ui->sliderC->setValue(0);
+    ui->spinBoxZ->setValue(0);
+    ui->spinBoxT->setValue(0);
+    ui->spinBoxC->setValue(0);
+
+    ui->sliderZ->blockSignals(false);
+    ui->sliderT->blockSignals(false);
+    ui->sliderC->blockSignals(false);
+    ui->spinBoxZ->blockSignals(false);
+    ui->spinBoxT->blockSignals(false);
+    ui->spinBoxC->blockSignals(false);
+
+    // Update metadata widget with new dimensions
+    ImageMetadata metadata = m_tiffImage->extractMetadata(0);
+    QFileInfo fileInfo(m_tiffImage->filename());
+    if (metadata.imageName.isEmpty())
+        metadata.imageName = fileInfo.fileName();
+    ui->imageMetaWidget->setMetadata(metadata);
+
+    statusBar()->showMessage(QStringLiteral("Reinterpreted with %1 channels - Size: %2x%3, Z:%4 T:%5 C:%6")
+                                 .arg(count)
+                                 .arg(m_tiffImage->sizeX())
+                                 .arg(m_tiffImage->sizeY())
+                                 .arg(m_tiffImage->sizeZ())
+                                 .arg(m_tiffImage->sizeT())
+                                 .arg(m_tiffImage->sizeC()));
+
+    // Update display
+    updateImage();
 }

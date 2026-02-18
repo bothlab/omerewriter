@@ -9,6 +9,7 @@
 #include <QObject>
 #include <QString>
 #include <memory>
+#include <expected>
 
 #include <ome/files/FormatReader.h>
 #include <ome/xml/meta/OMEXMLMetadata.h>
@@ -77,19 +78,20 @@ struct RawImage {
 };
 
 /**
- * @brief Wrapper class for reading OME-TIFF files using ome-files library.
+ * @brief Wrapper class for reading & writing OME-TIFF files
  *
- * This class provides on-demand loading of individual planes from OME-TIFF files.
+ * This class provides on-demand loading of individual planes from OME-TIFF and raw TIFF files,
+ * as well as writing data back to OME-TIFF.
  */
-class OMETiffReader : public QObject
+class OMETiffImage : public QObject
 {
     Q_OBJECT
 
 public:
     using dimension_size_type = ome::files::dimension_size_type;
 
-    explicit OMETiffReader(QObject *parent = nullptr);
-    ~OMETiffReader() override;
+    explicit OMETiffImage(QObject *parent = nullptr);
+    ~OMETiffImage() override;
 
     /**
      * @brief Open an OME-TIFF file.
@@ -118,6 +120,32 @@ public:
      * @return true if it's an OME-TIFF, false otherwise.
      */
     [[nodiscard]] bool isOmeTiff() const;
+
+    /**
+     * @brief Set the number of interleaved channels for raw TIFF interpretation.
+     *
+     * For raw TIFFs that have channels interleaved (e.g., Z1C1, Z1C2, Z2C1, Z2C2...),
+     * this allows reinterpreting the planes as multiple channels.
+     *
+     * @param channelCount Number of interleaved channels (1 = no interleaving)
+     */
+    std::expected<bool, QString> setInterleavedChannelCount(dimension_size_type channelCount);
+
+    /**
+     * @brief Get the current interleaved channel count setting.
+     * @return The number of interleaved channels (1 = no interleaving)
+     */
+    [[nodiscard]] dimension_size_type interleavedChannelCount() const;
+
+    /**
+     * @brief Get the raw/original number of planes in the file.
+     *
+     * This returns the actual number of 2D images in the TIFF file,
+     * regardless of how they are interpreted (interleaving, Z, C, T).
+     *
+     * @return Raw plane count from the file
+     */
+    [[nodiscard]] dimension_size_type rawImageCount() const;
 
     // Dimension accessors
     [[nodiscard]] dimension_size_type sizeX() const;
@@ -194,7 +222,7 @@ public:
      * @param metadata Modified metadata to apply
      * @return true if save was successful, false otherwise
      */
-    bool saveWithMetadata(const QString &outputPath, const ImageMetadata &metadata);
+    std::expected<bool, QString> saveWithMetadata(const QString &outputPath, const ImageMetadata &metadata);
 
 private:
     class Private;

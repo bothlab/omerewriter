@@ -7,7 +7,7 @@
 #pragma once
 
 #include <QWidget>
-#include "ometiffreader.h"
+#include "ometiffimage.h"
 
 namespace Ui
 {

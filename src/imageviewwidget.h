@@ -23,7 +23,7 @@
 #include <QOpenGLFunctions>
 #include <memory>
 
-#include "ometiffreader.h"
+#include "ometiffimage.h"
 
 class ImageViewWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
