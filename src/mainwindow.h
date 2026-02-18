@@ -7,9 +7,12 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QThread>
+#include <QProgressDialog>
 #include <memory>
 
 class OMETiffImage;
+struct ImageMetadata;
 
 QT_BEGIN_NAMESPACE
 namespace Ui
@@ -39,9 +42,11 @@ private slots:
     void onInterleavedChannelsChanged(int count);
 
 private:
+    void resetSliderValues();
     void updateSliderRanges();
     void setNavigationEnabled(bool enabled);
     void saveCurrentFile(bool quicksave);
+    bool performSaveWithProgress(const QString &filename, const ImageMetadata &metadata);
 
     Ui::MainWindow *ui;
     std::unique_ptr<OMETiffImage> m_tiffImage;

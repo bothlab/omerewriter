@@ -10,6 +10,7 @@
 #include <QString>
 #include <memory>
 #include <expected>
+#include <functional>
 
 #include <ome/files/FormatReader.h>
 #include <ome/xml/meta/OMEXMLMetadata.h>
@@ -210,19 +211,32 @@ public:
     [[nodiscard]] std::shared_ptr<ome::xml::meta::OMEXMLMetadata> omeMetadata() const;
 
     /**
-     * @brief Extract metadata from the loaded file into a convenient structure.
-     * @param imageIndex The image/series index (default 0)
-     * @return ImageMetadata structure with extracted values
+     * @brief Extract metadata from the currently open image
+     * @param imageIndex The image series index (usually 0)
+     * @return Extracted metadata
      */
     [[nodiscard]] ImageMetadata extractMetadata(dimension_size_type imageIndex = 0) const;
 
     /**
-     * @brief Save the current file with modified metadata to a new location.
-     * @param outputPath Path for the output OME-TIFF file
-     * @param metadata Modified metadata to apply
-     * @return true if save was successful, false otherwise
+     * @brief Progress callback function type for save operations.
+     *
+     * @param current Current plane being written
+     * @param total Total number of planes to write
+     * @return true to continue, false to cancel
      */
-    std::expected<bool, QString> saveWithMetadata(const QString &outputPath, const ImageMetadata &metadata);
+    using ProgressCallback = std::function<bool(dimension_size_type current, dimension_size_type total)>;
+
+    /**
+     * @brief Save the current image data with modified metadata to an OME-TIFF file.
+     * @param outputPath Path to the output OME-TIFF file.
+     * @param metadata Metadata to write to the file.
+     * @param progressCallback Optional callback for progress reporting (current, total) -> continue?
+     * @return true if successful, error message otherwise.
+     */
+    std::expected<bool, QString> saveWithMetadata(
+        const QString &outputPath,
+        const ImageMetadata &metadata,
+        ProgressCallback progressCallback = nullptr);
 
 private:
     class Private;

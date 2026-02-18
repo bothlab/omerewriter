@@ -872,7 +872,10 @@ ImageMetadata OMETiffImage::extractMetadata(dimension_size_type imageIndex) cons
     return meta;
 }
 
-std::expected<bool, QString> OMETiffImage::saveWithMetadata(const QString &outputPath, const ImageMetadata &metadata)
+std::expected<bool, QString> OMETiffImage::saveWithMetadata(
+    const QString &outputPath,
+    const ImageMetadata &metadata,
+    ProgressCallback progressCallback)
 {
     if (!d->reader)
         return std::unexpected("No image data loaded");
@@ -1060,9 +1063,16 @@ std::expected<bool, QString> OMETiffImage::saveWithMetadata(const QString &outpu
             // For interleaved raw TIFFs: write planes in the correct order for OME-TIFF
             // OME-TIFF expects planes ordered by dimension order (XYZCT means Z varies fastest, then C, then T)
             dimension_size_type outPlane = 0;
+            dimension_size_type totalPlanes = d->sizeT * d->sizeC * d->sizeZ;
+
             for (dimension_size_type t = 0; t < d->sizeT; ++t) {
                 for (dimension_size_type c = 0; c < d->sizeC; ++c) {
                     for (dimension_size_type z = 0; z < d->sizeZ; ++z) {
+                        if (progressCallback && !progressCallback(outPlane, totalPlanes)) {
+                            writer->close();
+                            return std::unexpected("Save operation cancelled by user");
+                        }
+
                         // Get the raw plane index for this (z, c, t) combination
                         dimension_size_type rawPlane = d->getPlaneIndex(z, c, t);
 
@@ -1077,6 +1087,11 @@ std::expected<bool, QString> OMETiffImage::saveWithMetadata(const QString &outpu
             // For OME-TIFF or non-interleaved: copy planes directly
             dimension_size_type planeCount = d->reader->getImageCount();
             for (dimension_size_type plane = 0; plane < planeCount; ++plane) {
+                if (progressCallback && !progressCallback(plane, planeCount)) {
+                    writer->close();
+                    return std::unexpected("Save operation cancelled by user");
+                }
+
                 VariantPixelBuffer buf;
                 d->reader->openBytes(plane, buf);
                 writer->saveBytes(plane, buf);
