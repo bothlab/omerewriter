@@ -812,10 +812,8 @@ ImageMetadata OMETiffImage::extractMetadata(dimension_size_type imageIndex) cons
 
             try {
                 chParams.acquisitionMode = retrieve->getChannelAcquisitionMode(imageIndex, ch);
-                if (chParams.acquisitionMode == enums::AcquisitionMode::MULTIPHOTONMICROSCOPY) {
-                    chParams.isMultiPhoton = true;
-                    chParams.photonCount = 2; // Default assumption
-                }
+                if (chParams.acquisitionMode == enums::AcquisitionMode::MULTIPHOTONMICROSCOPY)
+                    chParams.photonCount = 2; // Default assumption for multiphoton
                 qDebug() << "extractMetadata: Channel" << ch << "acquisition mode:" << chParams.acquisitionMode;
             } catch (const std::exception &e) {
                 chParams.acquisitionMode = enums::AcquisitionMode::LASERSCANNINGCONFOCALMICROSCOPY;

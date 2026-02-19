@@ -84,7 +84,6 @@ MicroscopeParamsWidget::MicroscopeParamsWidget(QWidget *parent)
         QOverload<int>::of(&QComboBox::currentIndexChanged),
         this,
         &MicroscopeParamsWidget::onMetadataFieldChanged);
-    connect(ui->chkMultiPhoton, &QCheckBox::toggled, this, &MicroscopeParamsWidget::onMetadataFieldChanged);
     connect(ui->editChannelLabel, &QLineEdit::textChanged, this, &MicroscopeParamsWidget::onMetadataFieldChanged);
     connect(
         ui->spinPinholeNm,
@@ -214,7 +213,6 @@ void MicroscopeParamsWidget::clearMetadata()
     // Channels
     ui->listChannels->clear();
     ui->comboMicroscopeType->setCurrentIndex(enums::AcquisitionMode::LASERSCANNINGCONFOCALMICROSCOPY);
-    ui->chkMultiPhoton->setChecked(false);
     ui->editChannelLabel->clear();
     ui->spinPinholeNm->setValue(0);
     ui->spinExcitationNm->setValue(0);
@@ -290,10 +288,6 @@ void MicroscopeParamsWidget::updateChannelUI(int channelIndex)
 
     // Microscope type
     ui->comboMicroscopeType->setCurrentIndex(ch.acquisitionMode);
-
-    // Multi-photon
-    ui->chkMultiPhoton->setChecked(ch.isMultiPhoton);
-    ui->groupMultiphoton->setVisible(ch.isMultiPhoton);
     ui->spinPhotonCount->setValue(ch.photonCount);
 
     // Channel label
@@ -316,9 +310,6 @@ void MicroscopeParamsWidget::saveCurrentChannelData()
 
     // Microscope type
     ch.acquisitionMode = enums::AcquisitionMode::enum_value(ui->comboMicroscopeType->currentData().toInt());
-
-    // Multi-photon
-    ch.isMultiPhoton = ui->chkMultiPhoton->isChecked();
     ch.photonCount = ui->spinPhotonCount->value();
 
     // Channel label
@@ -337,15 +328,14 @@ QString MicroscopeParamsWidget::formatDataSize(size_t bytes) const
     const double GB = MB * 1024.0;
     const double TB = GB * 1024.0;
 
-    if (bytes >= TB) {
+    if (bytes >= TB)
         return QString("%1 TiB").arg(bytes / TB, 0, 'f', 2);
-    } else if (bytes >= GB) {
+    if (bytes >= GB)
         return QString("%1 GiB").arg(bytes / GB, 0, 'f', 2);
-    } else if (bytes >= MB) {
+    if (bytes >= MB)
         return QString("%1 MiB").arg(bytes / MB, 0, 'f', 1);
-    } else if (bytes >= KB) {
+    if (bytes >= KB)
         return QString("%1 KiB").arg(bytes / KB, 0, 'f', 1);
-    } else {
-        return QString("%1 B").arg(bytes);
-    }
+
+    return QString("%1 B").arg(bytes);
 }

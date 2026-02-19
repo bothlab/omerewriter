@@ -20,11 +20,11 @@
  */
 struct ChannelParams {
     QString name; /// channel name
-    ome::xml::model::enums::AcquisitionMode acquisitionMode = ome::xml::model::enums::AcquisitionMode::OTHER;
+    ome::xml::model::enums::AcquisitionMode acquisitionMode =
+        ome::xml::model::enums::AcquisitionMode::LASERSCANNINGCONFOCALMICROSCOPY;
     double exWavelengthNm = 0;
     double emWavelengthNm = 0;
     double pinholeSizeNm = 0;
-    bool isMultiPhoton = false;
     int photonCount = 1;
 };
 
