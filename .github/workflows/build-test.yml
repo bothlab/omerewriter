@@ -100,6 +100,13 @@ jobs:
             --no-translations \
             $DEPLOY_DIR/bin/OMERewriter.exe
 
+          # Copy DLLs
+          ldd $DEPLOY_DIR/bin/OMERewriter.exe \
+            | awk '/\/ucrt64\/bin/ { print $3 }' \
+            | while read -r dll; do
+                  install -v -p "$dll" $DEPLOY_DIR/bin/
+              done
+
           # Misc
           cp LICENSE.* $DEPLOY_DIR/LICENSE.txt
           cp README.md $DEPLOY_DIR/
@@ -107,7 +114,7 @@ jobs:
           # Cleanup
           rm -rf $DEPLOY_DIR/cmake
           rm -rf $DEPLOY_DIR/include
-          rm -rf $DEPLOY_DIR/lib/*.a
+          rm -f $DEPLOY_DIR/lib/*.a
 
       - name: Upload Snapshot
         uses: actions/upload-artifact@v6
