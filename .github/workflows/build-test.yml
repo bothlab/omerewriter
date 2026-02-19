@@ -28,3 +28,89 @@ jobs:
     - name: Build & Test
       run: podman run -t -e CC=gcc -e CXX=g++ -v `pwd`:/build omerewriter
            ./tests/ci/build-and-test.sh
+
+  build-windows:
+    name: Windows
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ucrt64
+          path-type: inherit
+          update: true
+          pacboy: >-
+            git
+            cmake
+            ninja
+            gcc:p
+            python
+            python-pip:p
+            qt6-base:p
+            qt6-5compat:p
+            qt6-svg:p
+            gtest:p
+            fmt:p
+            spdlog:p
+            boost:p
+            libtiff:p
+            libpng:p
+
+      - name: Set up Python venv
+        run: |
+          python -m venv venv
+          ./venv/bin/python -m pip install -U pip
+
+          # Persist for later steps
+          cat > .msys2_env <<'EOF'
+          export VIRTUAL_ENV="$GITHUB_WORKSPACE/venv"
+          export PATH="$VIRTUAL_ENV/bin:$PATH"
+          EOF
+          echo "BASH_ENV=$(cygpath -w "$PWD/.msys2_env")" >> "$GITHUB_ENV"
+
+      - name: Install Python packages
+        run: pip install six genshi
+
+      - name: Configure
+        run: |
+          cmake -GNinja -Bbuild \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/OMERewriter" \
+            -DPython3_EXECUTABLE="$(cygpath -w "$PWD/venv/bin/python")" \
+            -DPython3_FIND_VIRTUALENV=FIRST
+          touch CMakeLists.txt
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Install & Bundle
+        run: |
+          cmake --build build --target install
+
+          cd $GITHUB_WORKSPACE
+          DEPLOY_DIR=$GITHUB_WORKSPACE/install/OMERewriter
+
+          windeployqt \
+            --no-quick-import \
+            --no-translations \
+            $DEPLOY_DIR/bin/OMERewriter.exe
+
+          # Misc
+          cp LICENSE.* $DEPLOY_DIR/LICENSE.txt
+          cp README.md $DEPLOY_DIR/
+
+          # Cleanup
+          rm -rf $DEPLOY_DIR/cmake
+          rm -rf $DEPLOY_DIR/include
+          rm -rf $DEPLOY_DIR/lib/*.a
+
+      - name: Upload Snapshot
+        uses: actions/upload-artifact@v6
+        with:
+            name: OMERewriter-snapshot_win64
+            path: install/
