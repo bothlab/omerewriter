@@ -12,6 +12,7 @@
 #include <memory>
 
 class OMETiffImage;
+class SavedParamsManager;
 struct ImageMetadata;
 
 QT_BEGIN_NAMESPACE
@@ -41,15 +42,23 @@ private slots:
     void onMetadataModified();
     void onInterleavedChannelsChanged(int count);
 
+    void onSaveParamsClicked();
+    void onLoadParamsClicked();
+    void onQuickLoadParamsClicked();
+    void onRemoveParamsFromListClicked();
+
 private:
     void resetSliderValues();
     void updateSliderRanges();
     void setNavigationEnabled(bool enabled);
     void saveCurrentFile(bool quicksave);
     bool performSaveWithProgress(const QString &filename, const ImageMetadata &metadata);
+    void updateSavedParamsList();
+    void loadParametersFromFile(const QString &filePath);
 
     Ui::MainWindow *ui;
     std::unique_ptr<OMETiffImage> m_tiffImage;
+    std::unique_ptr<SavedParamsManager> m_savedParamsManager;
 
     // Current position in the image stack
     int m_currentZ = 0;

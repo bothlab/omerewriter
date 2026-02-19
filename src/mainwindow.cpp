@@ -8,6 +8,8 @@
 #include "ui_mainwindow.h"
 #include "ometiffimage.h"
 #include "microscopeparamswidget.h"
+#include "metadatajson.h"
+#include "savedparamsmanager.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -60,7 +62,7 @@ public slots:
     }
 
 signals:
-    void progressChanged(int current, int total);
+    void progressChanged(uint current, uint total);
     void finished(bool success, const QString &errorMessage);
 
 private:
@@ -75,7 +77,8 @@ private:
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),
       ui(new Ui::MainWindow),
-      m_tiffImage(std::make_unique<OMETiffImage>(this))
+      m_tiffImage(std::make_unique<OMETiffImage>(this)),
+      m_savedParamsManager(std::make_unique<SavedParamsManager>(this))
 {
     ui->setupUi(this);
 
@@ -83,8 +86,16 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::openFile);
     connect(ui->actionSave, &QAction::triggered, this, &MainWindow::saveFile);
     connect(ui->actionSaveAs, &QAction::triggered, this, &MainWindow::saveFileAs);
+    connect(ui->actionLoadParams, &QAction::triggered, this, &MainWindow::onLoadParamsClicked);
     connect(ui->btnLoadTiff, &QPushButton::clicked, this, &MainWindow::openFile);
     connect(ui->btnQuickSave, &QPushButton::clicked, this, &MainWindow::quickSaveFile);
+
+    // Parameter management
+    connect(ui->btnSaveParams, &QPushButton::clicked, this, &MainWindow::onSaveParamsClicked);
+    connect(ui->btnQuickLoadParams, &QPushButton::clicked, this, &MainWindow::onQuickLoadParamsClicked);
+    connect(ui->btnRemoveParamsFromList, &QPushButton::clicked, this, &MainWindow::onRemoveParamsFromListClicked);
+    connect(ui->listSavedParams, &QListWidget::itemDoubleClicked, this, &MainWindow::onQuickLoadParamsClicked);
+    connect(m_savedParamsManager.get(), &SavedParamsManager::filesChanged, this, &MainWindow::updateSavedParamsList);
 
     // Slider connections
     connect(ui->sliderZ, &QSlider::valueChanged, this, &MainWindow::onSliderZChanged);
@@ -117,6 +128,9 @@ MainWindow::MainWindow(QWidget *parent)
     // Set default range for interleave count (1 = no interleaving)
     ui->spinCInterleaveCount->setRange(1, 32);
     ui->spinCInterleaveCount->setValue(1);
+
+    // Initialize saved params list
+    updateSavedParamsList();
 }
 
 MainWindow::~MainWindow()
@@ -558,4 +572,166 @@ bool MainWindow::performSaveWithProgress(const QString &filename, const ImageMet
             this, QStringLiteral("Failed to save TIFF file"), errorMessage.isEmpty() ? "Unknown error!" : errorMessage);
 
     return success;
+}
+
+void MainWindow::onSaveParamsClicked()
+{
+    const auto metadata = ui->imageMetaWidget->getMetadata();
+
+    auto filename = QFileDialog::getSaveFileName(
+        this,
+        QStringLiteral("Save Microscope Parameters"),
+        QString(),
+        QStringLiteral("JSON Files (*.json);;All Files (*)"));
+
+    if (filename.isEmpty())
+        return;
+    if (!filename.endsWith(".json", Qt::CaseInsensitive))
+        filename += ".json";
+
+    const auto result = MetadataJson::saveToFile(metadata, filename);
+    if (!result) {
+        QMessageBox::critical(
+            this, QStringLiteral("Save Failed"), QStringLiteral("Failed to save parameters:\n%1").arg(result.error()));
+        return;
+    }
+
+    // Add to saved list
+    m_savedParamsManager->addFile(filename);
+    statusBar()->showMessage(tr("Parameters saved to: %1").arg(filename), 5000);
+}
+
+void MainWindow::onLoadParamsClicked()
+{
+    const auto filename = QFileDialog::getOpenFileName(
+        this,
+        QStringLiteral("Load Microscope Parameters"),
+        QString(),
+        QStringLiteral("JSON Files (*.json);;All Files (*)"));
+
+    if (filename.isEmpty())
+        return;
+
+    loadParametersFromFile(filename);
+
+    // Add to saved list for future quick access
+    m_savedParamsManager->addFile(filename);
+}
+
+void MainWindow::onQuickLoadParamsClicked()
+{
+    auto selectedItems = ui->listSavedParams->selectedItems();
+    if (selectedItems.isEmpty()) {
+        QMessageBox::information(
+            this, QStringLiteral("No Selection"), QStringLiteral("Please select a parameter file from the list."));
+        return;
+    }
+
+    int selectedRow = ui->listSavedParams->row(selectedItems.first());
+    QStringList files = m_savedParamsManager->getFiles();
+
+    if (selectedRow < 0 || selectedRow >= files.size()) {
+        QMessageBox::warning(this, QStringLiteral("Invalid Selection"), QStringLiteral("Selected item is invalid."));
+        return;
+    }
+
+    loadParametersFromFile(files[selectedRow]);
+}
+
+void MainWindow::onRemoveParamsFromListClicked()
+{
+    auto selectedItems = ui->listSavedParams->selectedItems();
+    if (selectedItems.isEmpty()) {
+        QMessageBox::information(
+            this,
+            QStringLiteral("No Selection"),
+            QStringLiteral("Please select a parameter file to remove from the list."));
+        return;
+    }
+
+    int selectedRow = ui->listSavedParams->row(selectedItems.first());
+    QStringList files = m_savedParamsManager->getFiles();
+
+    if (selectedRow < 0 || selectedRow >= files.size())
+        return;
+
+    // Unregister with the manager
+    m_savedParamsManager->removeFile(files[selectedRow]);
+}
+
+void MainWindow::updateSavedParamsList()
+{
+    ui->listSavedParams->clear();
+
+    // Populate list with display names
+    ui->listSavedParams->addItems(m_savedParamsManager->getDisplayNames());
+
+    // Set tooltips with full paths
+    QStringList files = m_savedParamsManager->getFiles();
+    for (int i = 0; i < ui->listSavedParams->count(); ++i) {
+        if (i < files.size())
+            ui->listSavedParams->item(i)->setToolTip(files[i]);
+    }
+}
+
+void MainWindow::loadParametersFromFile(const QString &filePath)
+{
+    // Check if file exists
+    if (!QFileInfo::exists(filePath)) {
+        QMessageBox::warning(
+            this,
+            QStringLiteral("File Not Found"),
+            QStringLiteral("The file does not exist:\n%1\n\nIt will be removed from the list.").arg(filePath));
+        m_savedParamsManager->removeFile(filePath);
+        return;
+    }
+
+    auto result = MetadataJson::loadFromFile(filePath);
+    if (!result) {
+        QMessageBox::critical(
+            this, QStringLiteral("Load Failed"), QStringLiteral("Failed to load parameters:\n%1").arg(result.error()));
+        return;
+    }
+
+    auto loadedMeta = result.value();
+
+    // Preserve the current image dimensions and name
+    const auto currentMeta = ui->imageMetaWidget->getMetadata();
+    loadedMeta.sizeX = currentMeta.sizeX;
+    loadedMeta.sizeY = currentMeta.sizeY;
+    loadedMeta.sizeZ = currentMeta.sizeZ;
+    loadedMeta.sizeC = currentMeta.sizeC;
+    loadedMeta.sizeT = currentMeta.sizeT;
+    loadedMeta.pixelType = currentMeta.pixelType;
+    loadedMeta.dataSizeBytes = currentMeta.dataSizeBytes;
+    loadedMeta.imageName = currentMeta.imageName;
+
+    // Adjust channels to match current image
+    if (loadedMeta.channels.size() != currentMeta.channels.size()) {
+        QMessageBox::warning(
+            this,
+            QStringLiteral("Channel Count Mismatch"),
+            QStringLiteral(
+                "The loaded parameters have %1 channel(s), but the current image has %2 channel(s).\n"
+                "Only the overlapping channels will be updated.")
+                .arg(loadedMeta.channels.size())
+                .arg(currentMeta.channels.size()));
+
+        // Resize to match current image
+        if (loadedMeta.channels.size() > currentMeta.channels.size()) {
+            loadedMeta.channels.resize(currentMeta.channels.size());
+        } else {
+            // Keep existing channel data for channels beyond what's loaded
+            size_t loadedSize = loadedMeta.channels.size();
+            loadedMeta.channels.resize(currentMeta.channels.size());
+            for (size_t i = loadedSize; i < currentMeta.channels.size(); ++i)
+                loadedMeta.channels[i] = currentMeta.channels[i];
+        }
+    }
+
+    // Apply loaded metadata
+    ui->imageMetaWidget->setMetadata(loadedMeta);
+
+    QFileInfo fileInfo(filePath);
+    statusBar()->showMessage(QStringLiteral("Parameters loaded from: %1").arg(fileInfo.fileName()), 5000);
 }

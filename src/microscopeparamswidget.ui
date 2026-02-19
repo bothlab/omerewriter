@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1100</width>
-    <height>700</height>
+    <width>906</width>
+    <height>554</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -284,9 +284,9 @@
          <number>2</number>
         </property>
         <item>
-         <widget class="QLabel" name="lblRefractiveIndexesTitle">
+         <widget class="QLabel" name="lblRefractiveIndicesTitle">
           <property name="text">
-           <string>Refractive indexes:</string>
+           <string>Refractive indices:</string>
           </property>
          </widget>
         </item>

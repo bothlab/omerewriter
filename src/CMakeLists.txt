@@ -12,6 +12,10 @@ qt_add_executable(OMERewriter
         imageviewwidget.cpp
         ometiffimage.h
         ometiffimage.cpp
+        metadatajson.h
+        metadatajson.cpp
+        savedparamsmanager.h
+        savedparamsmanager.cpp
 )
 
 target_include_directories(OMERewriter SYSTEM PRIVATE
