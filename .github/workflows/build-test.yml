@@ -59,6 +59,8 @@ jobs:
             boost:p
             libtiff:p
             libpng:p
+            librsvg:p
+            icoutils:p
 
       - name: Set up Python venv
         run: |
