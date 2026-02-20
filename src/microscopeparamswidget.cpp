@@ -14,27 +14,31 @@
 
 using namespace ome::xml::model;
 
-MicroscopeParamsWidget::MicroscopeParamsWidget(QWidget *parent)
-    : QWidget(parent),
-      ui(new Ui::MicroscopeParamsWidget)
+static QString acqModeDisplayName(enums::AcquisitionMode modeValue)
 {
-    ui->setupUi(this);
-
-    // Human-readable display name overrides for selected acquisition modes.
-    static const QHash<int, QString> acqModeDisplayNames = {
+    static const QHash<int, QString> names = {
         {enums::AcquisitionMode::LASERSCANNINGCONFOCALMICROSCOPY,    QStringLiteral("Laser-Scanning Confocal")   },
         {enums::AcquisitionMode::MULTIPHOTONMICROSCOPY,              QStringLiteral("Multiphoton")               },
         {enums::AcquisitionMode::NEARFIELDSCANNINGOPTICALMICROSCOPY, QStringLiteral("Near-field scanning (NSOM)")},
         {enums::AcquisitionMode::SPINNINGDISKCONFOCAL,               QStringLiteral("Spinning Disk Confocal")    },
         {enums::AcquisitionMode::SECONDHARMONICGENERATIONIMAGING,    QStringLiteral("Second Harmonic Generation")},
     };
+    if (names.contains(modeValue))
+        return names.value(modeValue);
+    // Fall back to the raw OME string
+    return QString::fromStdString(std::string(modeValue));
+}
+
+MicroscopeParamsWidget::MicroscopeParamsWidget(QWidget *parent)
+    : QWidget(parent),
+      ui(new Ui::MicroscopeParamsWidget)
+{
+    ui->setupUi(this);
 
     // Set up combo box known values
     ui->comboMicroscopeType->clear();
-    for (auto v : enums::AcquisitionMode::values()) {
-        const QString label = acqModeDisplayNames.value(v.first, QString::fromStdString(v.second));
-        ui->comboMicroscopeType->addItem(label, v.first);
-    }
+    for (auto v : enums::AcquisitionMode::values())
+        ui->comboMicroscopeType->addItem(acqModeDisplayName(v.first), v.first);
 
     ui->comboLensImmersion->clear();
     for (auto v : enums::Immersion::values())
@@ -131,6 +135,11 @@ MicroscopeParamsWidget::MicroscopeParamsWidget(QWidget *parent)
 
     // Update channel label in list when changed
     connect(ui->editChannelLabel, &QLineEdit::textChanged, this, &MicroscopeParamsWidget::updateChannelInList);
+    connect(
+        ui->comboMicroscopeType,
+        QOverload<int>::of(&QComboBox::currentIndexChanged),
+        this,
+        &MicroscopeParamsWidget::updateChannelInList);
 }
 
 MicroscopeParamsWidget::~MicroscopeParamsWidget()
@@ -179,7 +188,7 @@ void MicroscopeParamsWidget::setMetadata(const ImageMetadata &metadata)
     ui->listChannels->clear();
     for (size_t i = 0; i < metadata.channels.size(); ++i) {
         const auto &ch = metadata.channels[i];
-        QString itemText = QString("%1: %2 - %3").arg(i).arg(std::string(ch.acquisitionMode)).arg(ch.name);
+        QString itemText = QString("%1: %2 - %3").arg(i).arg(acqModeDisplayName(ch.acquisitionMode)).arg(ch.name);
         ui->listChannels->addItem(itemText);
     }
 
@@ -301,10 +310,11 @@ void MicroscopeParamsWidget::updateChannelInList()
 
     int row = m_currentChannel;
     if (row >= 0 && row < ui->listChannels->count()) {
-        const auto acqMode = enums::AcquisitionMode(
-            enums::AcquisitionMode::enum_value(ui->comboMicroscopeType->currentData().toInt()));
-
-        QString itemText = QString("%1: %2 - %3").arg(row).arg(std::string(acqMode)).arg(ui->editChannelLabel->text());
+        const int modeValue = ui->comboMicroscopeType->currentData().toInt();
+        const QString itemText = QString("%1: %2 - %3")
+                                     .arg(row)
+                                     .arg(acqModeDisplayName(enums::AcquisitionMode::enum_value(modeValue)))
+                                     .arg(ui->editChannelLabel->text());
         ui->listChannels->item(row)->setText(itemText);
     }
 }
