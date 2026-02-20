@@ -1,0 +1,27 @@
+{
+    "channels": [
+        {
+            "acquisitionMode": "MultiPhotonMicroscopy",
+            "emWavelengthNm": 520,
+            "exWavelengthNm": 960,
+            "name": "GCaMP",
+            "photonCount": 2,
+            "pinholeSizeNm": 560
+        },
+        {
+            "acquisitionMode": "MultiPhotonMicroscopy",
+            "emWavelengthNm": 647,
+            "exWavelengthNm": 960,
+            "name": "SeTau",
+            "photonCount": 2,
+            "pinholeSizeNm": 560
+        }
+    ],
+    "embeddingMedium": "Water",
+    "immersionRI": 1.338,
+    "lensImmersion": "Water",
+    "numericalAperture": 1.1,
+    "physSizeXNm": 426.513,
+    "physSizeYNm": 426.513,
+    "physSizeZNm": 2000
+}
