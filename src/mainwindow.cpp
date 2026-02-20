@@ -10,6 +10,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QProgressDialog>
+#include <QTemporaryDir>
 #include <QThread>
 #include <QSettings>
 #include <QDebug>
@@ -87,11 +88,11 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     // Menu actions
-    connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::openFile);
-    connect(ui->actionSave, &QAction::triggered, this, &MainWindow::saveFile);
-    connect(ui->actionSaveAs, &QAction::triggered, this, &MainWindow::saveFileAs);
+    connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::onOpenFile);
+    connect(ui->actionSave, &QAction::triggered, this, &MainWindow::onSaveFile);
+    connect(ui->actionSaveAs, &QAction::triggered, this, &MainWindow::onSaveFileAs);
     connect(ui->actionLoadParams, &QAction::triggered, this, &MainWindow::onLoadParamsClicked);
-    connect(ui->btnLoadTiff, &QPushButton::clicked, this, &MainWindow::openFile);
+    connect(ui->btnLoadTiff, &QPushButton::clicked, this, &MainWindow::onOpenFile);
     connect(ui->btnQuickSave, &QPushButton::clicked, this, &MainWindow::quickSaveFile);
 
     // Parameter management
@@ -147,22 +148,14 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::openFile()
+bool MainWindow::openFile(const QString &filename)
 {
-    QString filename = QFileDialog::getOpenFileName(
-        this,
-        QStringLiteral("Open TIFF Image"),
-        QString(),
-        QStringLiteral(
-            "All TIFF Files (*.ome.tiff *.ome.tif *.tiff *.tif);;OME-TIFF Files (*.ome.tiff *.ome.tif);;TIFF Files "
-            "(*.tiff *.tif);;All Files (*)"));
-
     if (filename.isEmpty())
-        return;
+        return false;
 
     if (!m_tiffImage->open(filename)) {
         QMessageBox::critical(this, QStringLiteral("Error"), QStringLiteral("Failed to open file:\n%1").arg(filename));
-        return;
+        return false;
     }
 
     // Update window title
@@ -184,9 +177,8 @@ void MainWindow::openFile()
 
     // Load and display metadata in the params widget
     ImageMetadata metadata = m_tiffImage->extractMetadata(0);
-    if (metadata.imageName.isEmpty()) {
+    if (metadata.imageName.isEmpty())
         metadata.imageName = fileInfo.fileName();
-    }
 
     // Initialize contrast slider BEFORE displaying the image
     updateContrastSliderRange(metadata);
@@ -210,6 +202,21 @@ void MainWindow::openFile()
 
     // we only allow rewriting / deinterleave if we *didn't* load an OME-TIFF
     ui->groupTiffInterpretation->setEnabled(!m_tiffImage->isOmeTiff());
+
+    return true;
+}
+
+void MainWindow::onOpenFile()
+{
+    QString filename = QFileDialog::getOpenFileName(
+        this,
+        QStringLiteral("Open TIFF Image"),
+        QString(),
+        QStringLiteral(
+            "All TIFF Files (*.ome.tiff *.ome.tif *.tiff *.tif);;OME-TIFF Files (*.ome.tiff *.ome.tif);;TIFF Files "
+            "(*.tiff *.tif);;All Files (*)"));
+
+    openFile(filename);
 }
 
 void MainWindow::updateSliderRanges()
@@ -354,14 +361,11 @@ void MainWindow::saveCurrentFile(bool quicksave)
     const auto origFilename = m_tiffImage->filename();
 
     QString destFilename;
-    QString tempFile;
     if (wasOmeTiff) {
         destFilename = m_tiffImage->filename();
-        tempFile = tiffDir.absoluteFilePath("_tmp-" + createRandomString(6) + "_" + tiffBasename + ".ome.tiff");
     } else {
         // For raw TIFF, we save the modified OME-TIFF alongside the original, with a modified name
         destFilename = tiffDir.absoluteFilePath(tiffBasename + ".ome.tiff");
-        tempFile = tiffDir.absoluteFilePath("_tmp-" + createRandomString(6) + "_" + tiffBasename + ".ome.tiff");
 
         if (QFile::exists(destFilename)) {
             auto result = QMessageBox::question(
@@ -375,6 +379,21 @@ void MainWindow::saveCurrentFile(bool quicksave)
         }
     }
 
+    // Create a temporary directory in the same location as the destination
+    // This ensures: 1) disk space available, 2) same filesystem for atomic move
+    // 3) correct filename in OME-XML metadata (no temp filename warnings)
+    QTemporaryDir tempDir(tiffDir.absoluteFilePath("_temp-omewrite"));
+    if (!tempDir.isValid()) {
+        QMessageBox::critical(this, QStringLiteral("Error"), QStringLiteral("Failed to create temporary directory."));
+        return;
+    }
+    tempDir.setAutoRemove(true);
+
+    // Write to temp directory using the final filename
+    // This way the OME-XML metadata will contain the correct filename
+    QFileInfo destFi(destFilename);
+    QString tempFile = tempDir.filePath(destFi.fileName());
+
     ImageMetadata metadata = ui->imageMetaWidget->getMetadata();
 
     bool success = performSaveWithProgress(tempFile, metadata);
@@ -384,11 +403,11 @@ void MainWindow::saveCurrentFile(bool quicksave)
     // Close the original file
     m_tiffImage->close();
 
-    // Replace original with temp file
+    // Move from temp directory to final destination
     QFile::remove(destFilename);
     if (QFile::rename(tempFile, destFilename)) {
         // Reopen the file
-        if (m_tiffImage->open(destFilename)) {
+        if (openFile(destFilename)) {
             ui->imageMetaWidget->resetModified();
             statusBar()->showMessage(QStringLiteral("Saved: %1").arg(destFilename), 5000);
         } else {
@@ -398,7 +417,7 @@ void MainWindow::saveCurrentFile(bool quicksave)
         QMessageBox::critical(this, QStringLiteral("Error"), QStringLiteral("Failed to replace the original file."));
         // Try to recover by opening the temp file
         if (QFile::exists(tempFile))
-            m_tiffImage->open(tempFile);
+            openFile(tempFile);
     }
 
     if (!wasOmeTiff && !quicksave) {
@@ -418,7 +437,7 @@ void MainWindow::saveCurrentFile(bool quicksave)
     }
 }
 
-void MainWindow::saveFile()
+void MainWindow::onSaveFile()
 {
     saveCurrentFile(false);
 }
@@ -428,7 +447,7 @@ void MainWindow::quickSaveFile()
     saveCurrentFile(true);
 }
 
-void MainWindow::saveFileAs()
+void MainWindow::onSaveFileAs()
 {
     if (!m_tiffImage->isOpen()) {
         QMessageBox::warning(this, QStringLiteral("Warning"), QStringLiteral("No file is currently open."));
@@ -467,17 +486,7 @@ void MainWindow::saveFileAs()
 
     if (result == QMessageBox::Yes) {
         m_tiffImage->close();
-        if (m_tiffImage->open(filename)) {
-            QFileInfo fileInfo(filename);
-            setWindowTitle(QStringLiteral("OMERewriter - %1").arg(fileInfo.fileName()));
-            updateSliderRanges();
-            updateImage();
-            ImageMetadata newMeta = m_tiffImage->extractMetadata(0);
-            if (newMeta.imageName.isEmpty()) {
-                newMeta.imageName = fileInfo.fileName();
-            }
-            ui->imageMetaWidget->setMetadata(newMeta);
-        }
+        openFile(filename);
     }
 }
 

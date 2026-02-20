@@ -31,9 +31,9 @@ public:
     ~MainWindow() override;
 
 private slots:
-    void openFile();
-    void saveFile();
-    void saveFileAs();
+    void onOpenFile();
+    void onSaveFile();
+    void onSaveFileAs();
     void quickSaveFile();
     void updateImage();
     void onSliderZChanged(int value);
@@ -48,6 +48,7 @@ private slots:
     void onRemoveParamsFromListClicked();
 
 private:
+    bool openFile(const QString &filename);
     void resetSliderValues();
     void updateSliderRanges();
     void setNavigationEnabled(bool enabled);
