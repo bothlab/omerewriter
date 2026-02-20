@@ -137,9 +137,9 @@ public:
     bool highlightSaturation;
 
     // OpenGL resources
-    QOpenGLVertexArrayObject vao;
-    QOpenGLBuffer vbo;
-    QOpenGLShaderProgram shaderProgram;
+    std::unique_ptr<QOpenGLVertexArrayObject> vao;
+    std::unique_ptr<QOpenGLBuffer> vbo;
+    std::unique_ptr<QOpenGLShaderProgram> shaderProgram;
 
     // Optimized texture handling
     GLuint textureId;
@@ -202,21 +202,39 @@ ImageViewWidget::~ImageViewWidget()
 {
     // Clean up OpenGL resources when context is still current
     makeCurrent();
-
-    if (d->textureId != 0)
-        glDeleteTextures(1, &d->textureId);
-    if (d->pboIds[0] != 0)
-        glDeleteBuffers(2, d->pboIds);
-
-    d->vao.destroy();
-    d->vbo.destroy();
-
+    cleanupGL();
     doneCurrent();
+}
+
+void ImageViewWidget::cleanupGL()
+{
+    if (d->textureId != 0) {
+        glDeleteTextures(1, &d->textureId);
+        d->textureId = 0;
+        d->textureWidth = 0;
+        d->textureHeight = 0;
+    }
+    if (d->pboIds[0] != 0) {
+        glDeleteBuffers(2, d->pboIds);
+        d->pboIds[0] = d->pboIds[1] = 0;
+        d->pboSize = 0;
+        d->pboIndex = 0;
+    }
+
+    // Destroy heap-allocated GL objects (they are bound to the old context)
+    d->vao.reset();
+    d->vbo.reset();
+    d->shaderProgram.reset();
 }
 
 void ImageViewWidget::initializeGL()
 {
     initializeOpenGLFunctions();
+
+    // Clean up any resources from a previous context (e.g., when the widget is
+    // reparented by undocking a QDockWidget, a new context is created and
+    // initializeGL() is called again)
+    cleanupGL();
 
     auto bgColor = QColor::fromRgb(150, 150, 150);
     float r = ((float)bgColor.darker().red()) / 255.0f;
@@ -226,18 +244,21 @@ void ImageViewWidget::initializeGL()
     glClearColor(r, g, b, 1.0f);
 
     // Compile & link shaders
-    bool glOkay = true;
-    glOkay = d->shaderProgram.addShaderFromSourceCode(QOpenGLShader::Vertex, vertexShaderSource) && glOkay;
-    glOkay = d->shaderProgram.addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShaderSource) && glOkay;
+    d->shaderProgram = std::make_unique<QOpenGLShaderProgram>();
 
-    if (!d->shaderProgram.link()) {
+    bool glOkay = true;
+    glOkay = d->shaderProgram->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexShaderSource) && glOkay;
+    glOkay = d->shaderProgram->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShaderSource) && glOkay;
+
+    if (!d->shaderProgram->link()) {
         glOkay = false;
-        qWarning().noquote() << "Unable to link shader program:" << d->shaderProgram.log();
+        qWarning().noquote() << "Unable to link shader program:" << d->shaderProgram->log();
     }
 
     // Initialize VAO & VBO
-    d->vao.create();
-    glOkay = glOkay && d->vao.isCreated();
+    d->vao = std::make_unique<QOpenGLVertexArrayObject>();
+    d->vao->create();
+    glOkay = glOkay && d->vao->isCreated();
     if (!glOkay) {
         QMessageBox::critical(
             this,
@@ -249,37 +270,49 @@ void ImageViewWidget::initializeGL()
             QMessageBox::Ok);
         qFatal(
             "Unable to initialize OpenGL:\nVAO: %s\nShader Log: %s",
-            d->vao.isCreated() ? "true" : "false",
-            qPrintable(d->shaderProgram.log()));
+            d->vao->isCreated() ? "true" : "false",
+            qPrintable(d->shaderProgram->log()));
         exit(6);
     }
 
-    d->vao.bind();
+    d->vao->bind();
 
     GLfloat vertices[] = {-1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f};
 
-    d->vbo.create();
-    d->vbo.bind();
-    d->vbo.setUsagePattern(QOpenGLBuffer::StaticDraw);
-    d->vbo.allocate(vertices, sizeof(vertices));
+    d->vbo = std::make_unique<QOpenGLBuffer>();
+    d->vbo->create();
+    d->vbo->bind();
+    d->vbo->setUsagePattern(QOpenGLBuffer::StaticDraw);
+    d->vbo->allocate(vertices, sizeof(vertices));
 
-    d->shaderProgram.enableAttributeArray(0);
-    d->shaderProgram.setAttributeBuffer(0, GL_FLOAT, 0, 2, 2 * sizeof(GLfloat));
+    d->shaderProgram->enableAttributeArray(0);
+    d->shaderProgram->setAttributeBuffer(0, GL_FLOAT, 0, 2, 2 * sizeof(GLfloat));
 
-    d->vbo.release();
-    d->vao.release();
+    d->vbo->release();
+    d->vao->release();
 
     // Initialize shader uniforms with default values
-    d->shaderProgram.bind();
-    d->shaderProgram.setUniformValue("minPixelValue", 0.0f);
-    d->shaderProgram.setUniformValue("maxPixelValue", 1.0f);
-    d->shaderProgram.release();
+    d->shaderProgram->bind();
+    d->shaderProgram->setUniformValue("minPixelValue", 0.0f);
+    d->shaderProgram->setUniformValue("maxPixelValue", 1.0f);
+    d->shaderProgram->release();
 
     // Initialize PBOs for async texture uploads (if supported)
     d->pboIds[0] = d->pboIds[1] = 0;
     if (context()->hasExtension("GL_ARB_pixel_buffer_object") || context()->format().majorVersion() >= 3) {
         glGenBuffers(2, d->pboIds);
     }
+
+    // Reset cached uniform state so they get re-applied on next render
+    d->lastAspectRatio = -1.0f;
+    d->lastHighlightSaturation = false;
+    d->lastBgColor = QVector4D(-1.0f, -1.0f, -1.0f, -1.0f);
+    d->lastPixelRangeMin = -1;
+    d->lastPixelRangeMax = -1;
+
+    // If we already have image data, mark it for re-upload to the new context
+    if (!d->glImage.isEmpty())
+        d->imageDataChanged = true;
 }
 
 void ImageViewWidget::paintGL()
@@ -384,12 +417,12 @@ void ImageViewWidget::renderImage()
     // Render
     glClear(GL_COLOR_BUFFER_BIT);
 
-    d->shaderProgram.bind();
+    d->shaderProgram->bind();
 
     // Semi-static uniforms
     if (d->lastBgColor != d->bgColorVec) {
-        d->shaderProgram.setUniformValue("bgColor", d->bgColorVec);
-        d->shaderProgram.setUniformValue("isGrayscale", channels == 1 ? 1.0f : 0.0f);
+        d->shaderProgram->setUniformValue("bgColor", d->bgColorVec);
+        d->shaderProgram->setUniformValue("isGrayscale", channels == 1 ? 1.0f : 0.0f);
         d->lastBgColor = d->bgColorVec;
     }
 
@@ -398,12 +431,12 @@ void ImageViewWidget::renderImage()
     const float aspectRatio = static_cast<float>(width()) / height() / imageAspectRatio;
 
     if (std::abs(aspectRatio - d->lastAspectRatio) > 0.001f) {
-        d->shaderProgram.setUniformValue("aspectRatio", aspectRatio);
+        d->shaderProgram->setUniformValue("aspectRatio", aspectRatio);
         d->lastAspectRatio = aspectRatio;
     }
 
     if (d->highlightSaturation != d->lastHighlightSaturation) {
-        d->shaderProgram.setUniformValue("showSaturation", d->highlightSaturation ? 1.0f : 0.0f);
+        d->shaderProgram->setUniformValue("showSaturation", d->highlightSaturation ? 1.0f : 0.0f);
         d->lastHighlightSaturation = d->highlightSaturation;
     }
 
@@ -414,17 +447,17 @@ void ImageViewWidget::renderImage()
         const float minNorm = static_cast<float>(d->pixelRangeMin) / maxValue;
         const float maxNorm = static_cast<float>(d->pixelRangeMax) / maxValue;
 
-        d->shaderProgram.setUniformValue("minPixelValue", minNorm);
-        d->shaderProgram.setUniformValue("maxPixelValue", maxNorm);
+        d->shaderProgram->setUniformValue("minPixelValue", minNorm);
+        d->shaderProgram->setUniformValue("maxPixelValue", maxNorm);
         d->lastPixelRangeMin = d->pixelRangeMin;
         d->lastPixelRangeMax = d->pixelRangeMax;
     }
 
-    d->vao.bind();
+    d->vao->bind();
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-    d->vao.release();
+    d->vao->release();
 
-    d->shaderProgram.release();
+    d->shaderProgram->release();
 }
 
 bool ImageViewWidget::showImage(const RawImage &image)
