@@ -8,6 +8,7 @@
 #include "ui_microscopeparamswidget.h"
 
 #include <QDebug>
+#include <QFileInfo>
 
 using namespace ome::xml::model;
 
@@ -121,8 +122,17 @@ void MicroscopeParamsWidget::setMetadata(const ImageMetadata &metadata)
     m_metadata = metadata;
     m_currentChannel = -1;
 
+    auto imageNameShort = metadata.imageName;
+    imageNameShort = QFileInfo(imageNameShort).baseName();
+
+    // add linebreak in the middle if name is long
+    if (imageNameShort.length() > 25) {
+        qsizetype mid = imageNameShort.length() / 2;
+        imageNameShort.insert(mid, "\n");
+    }
+
     // Statistics group
-    ui->lblImageNameVal->setText(metadata.imageName.isEmpty() ? tr("No image loaded!") : metadata.imageName);
+    ui->lblImageNameVal->setText(metadata.imageName.isEmpty() ? tr("No image loaded!") : imageNameShort);
     ui->lblDimsVal->setText(QString("%1×%2×%3 (px)").arg(metadata.sizeX).arg(metadata.sizeY).arg(metadata.sizeZ));
     ui->lblChannelsVal->setText(QString::number(metadata.sizeC));
     ui->lblTypeVal->setText(metadata.pixelType);

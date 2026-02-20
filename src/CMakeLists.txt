@@ -2,12 +2,14 @@
 qt_add_executable(OMERewriter
         WIN32 MACOSX_BUNDLE
         main.cpp
-        mainwindow.cpp
         mainwindow.h
+        mainwindow.cpp
         mainwindow.ui
         microscopeparamswidget.h
         microscopeparamswidget.cpp
         microscopeparamswidget.ui
+        elidedlabel.h
+        elidedlabel.cpp
         imageviewwidget.h
         imageviewwidget.cpp
         ometiffimage.h
