@@ -88,6 +88,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     // Menu actions
+    ui->menuView->addAction(ui->viewDockWidget->toggleViewAction());
     connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::onOpenFile);
     connect(ui->actionSave, &QAction::triggered, this, &MainWindow::onSaveFile);
     connect(ui->actionSaveAs, &QAction::triggered, this, &MainWindow::onSaveFileAs);
@@ -130,6 +131,9 @@ MainWindow::MainWindow(QWidget *parent)
     // Default state
     setNavigationEnabled(false);
     ui->groupTiffInterpretation->setEnabled(false);
+
+    // we currently hide the view menu, as it isn't used yet
+    ui->menuView->menuAction()->setVisible(false);
 
     // Set default range for interleave count (1 = no interleaving)
     ui->spinCInterleaveCount->setRange(1, 32);
@@ -826,6 +830,9 @@ void MainWindow::restoreWindowState()
     const QByteArray state = settings.value("window/state").toByteArray();
     if (!state.isEmpty())
         restoreState(state);
+
+    // ensure the dock widget is never accidentally hidden
+    ui->viewDockWidget->setVisible(true);
 }
 
 QString MainWindow::getLastDirectory(const QString &key, const QString &defaultDir) const

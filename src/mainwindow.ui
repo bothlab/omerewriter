@@ -252,7 +252,13 @@
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>&amp;View</string>
+    </property>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuView"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="viewDockWidget">
@@ -261,6 +267,12 @@
      <horstretch>10</horstretch>
      <verstretch>0</verstretch>
     </sizepolicy>
+   </property>
+   <property name="features">
+    <set>QDockWidget::DockWidgetFeature::DockWidgetFloatable|QDockWidget::DockWidgetFeature::DockWidgetMovable</set>
+   </property>
+   <property name="windowTitle">
+    <string>Image Preview</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
