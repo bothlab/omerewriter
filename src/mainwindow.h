@@ -56,6 +56,9 @@ private:
     void updateSavedParamsList();
     void loadParametersFromFile(const QString &filePath);
 
+    void saveWindowState();
+    void restoreWindowState();
+
     Ui::MainWindow *ui;
     std::unique_ptr<OMETiffImage> m_tiffImage;
     std::unique_ptr<SavedParamsManager> m_savedParamsManager;

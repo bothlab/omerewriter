@@ -12,7 +12,7 @@
 
 SavedParamsManager::SavedParamsManager(QObject *parent)
     : QObject(parent),
-      m_settings("OMERewriter")
+      m_settings("OMERewriter", "OMERewriter")
 {
     loadFromSettings();
 }

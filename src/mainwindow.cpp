@@ -15,6 +15,7 @@
 #include <QMessageBox>
 #include <QProgressDialog>
 #include <QThread>
+#include <QSettings>
 #include <QDebug>
 #include <atomic>
 
@@ -131,10 +132,14 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Initialize saved params list
     updateSavedParamsList();
+
+    // Restore window geometry and state from previous session
+    restoreWindowState();
 }
 
 MainWindow::~MainWindow()
 {
+    saveWindowState();
     delete ui;
 }
 
@@ -734,4 +739,28 @@ void MainWindow::loadParametersFromFile(const QString &filePath)
 
     QFileInfo fileInfo(filePath);
     statusBar()->showMessage(QStringLiteral("Parameters loaded from: %1").arg(fileInfo.fileName()), 5000);
+}
+
+void MainWindow::saveWindowState()
+{
+    QSettings settings("OMERewriter", "OMERewriter");
+
+    settings.setValue("window/geometry", saveGeometry());
+    settings.setValue("window/state", saveState());
+
+    settings.sync();
+}
+
+void MainWindow::restoreWindowState()
+{
+    QSettings settings("OMERewriter", "OMERewriter");
+
+    const QByteArray geometry = settings.value("window/geometry").toByteArray();
+    if (!geometry.isEmpty())
+        restoreGeometry(geometry);
+
+    // Restore window state (includes dock widget positions and visibility)
+    const QByteArray state = settings.value("window/state").toByteArray();
+    if (!state.isEmpty())
+        restoreState(state);
 }
