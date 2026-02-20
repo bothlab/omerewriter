@@ -20,10 +20,21 @@ MicroscopeParamsWidget::MicroscopeParamsWidget(QWidget *parent)
 {
     ui->setupUi(this);
 
+    // Human-readable display name overrides for selected acquisition modes.
+    static const QHash<int, QString> acqModeDisplayNames = {
+        {enums::AcquisitionMode::LASERSCANNINGCONFOCALMICROSCOPY,    QStringLiteral("Laser-Scanning Confocal")   },
+        {enums::AcquisitionMode::MULTIPHOTONMICROSCOPY,              QStringLiteral("Multiphoton")               },
+        {enums::AcquisitionMode::NEARFIELDSCANNINGOPTICALMICROSCOPY, QStringLiteral("Near-field scanning (NSOM)")},
+        {enums::AcquisitionMode::SPINNINGDISKCONFOCAL,               QStringLiteral("Spinning Disk Confocal")    },
+        {enums::AcquisitionMode::SECONDHARMONICGENERATIONIMAGING,    QStringLiteral("Second Harmonic Generation")},
+    };
+
     // Set up combo box known values
     ui->comboMicroscopeType->clear();
-    for (auto v : enums::AcquisitionMode::values())
-        ui->comboMicroscopeType->addItem(QString::fromStdString(v.second), v.first);
+    for (auto v : enums::AcquisitionMode::values()) {
+        const QString label = acqModeDisplayNames.value(v.first, QString::fromStdString(v.second));
+        ui->comboMicroscopeType->addItem(label, v.first);
+    }
 
     ui->comboLensImmersion->clear();
     for (auto v : enums::Immersion::values())
@@ -87,6 +98,15 @@ MicroscopeParamsWidget::MicroscopeParamsWidget(QWidget *parent)
         QOverload<int>::of(&QComboBox::currentIndexChanged),
         this,
         &MicroscopeParamsWidget::onMetadataFieldChanged);
+    connect(ui->comboMicroscopeType, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
+        const bool isMultiphoton = ui->comboMicroscopeType->currentData().toInt()
+                                   == enums::AcquisitionMode::MULTIPHOTONMICROSCOPY;
+        ui->groupMultiphoton->setEnabled(isMultiphoton);
+        if (isMultiphoton && ui->spinPhotonCount->value() < 2)
+            ui->spinPhotonCount->setValue(2); // Multiphoton typically involves 2 or more photons
+        else
+            ui->spinPhotonCount->setValue(1);
+    });
     connect(ui->editChannelLabel, &QLineEdit::textChanged, this, &MicroscopeParamsWidget::onMetadataFieldChanged);
     connect(
         ui->spinPinholeNm,
@@ -225,6 +245,7 @@ void MicroscopeParamsWidget::clearMetadata()
     // Channels
     ui->listChannels->clear();
     ui->comboMicroscopeType->setCurrentIndex(enums::AcquisitionMode::LASERSCANNINGCONFOCALMICROSCOPY);
+    ui->groupMultiphoton->setEnabled(false);
     ui->editChannelLabel->clear();
     ui->spinPinholeNm->setValue(0);
     ui->spinExcitationNm->setValue(0);
@@ -267,9 +288,8 @@ void MicroscopeParamsWidget::onMetadataFieldChanged()
     m_modified = true;
 
     // Save current channel data if a channel is selected
-    if (m_currentChannel >= 0 && m_currentChannel < static_cast<int>(m_metadata.channels.size())) {
+    if (m_currentChannel >= 0 && m_currentChannel < static_cast<int>(m_metadata.channels.size()))
         saveCurrentChannelData();
-    }
 
     emit metadataModified();
 }
@@ -300,6 +320,7 @@ void MicroscopeParamsWidget::updateChannelUI(int channelIndex)
 
     // Microscope type
     ui->comboMicroscopeType->setCurrentIndex(ch.acquisitionMode);
+    ui->groupMultiphoton->setEnabled(ch.acquisitionMode == enums::AcquisitionMode::MULTIPHOTONMICROSCOPY);
     ui->spinPhotonCount->setValue(ch.photonCount);
 
     // Channel label
