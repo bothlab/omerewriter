@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.bothlab.omerewriter</id>
+
+  <name>OME Rewriter</name>
+  <summary>View and rewrite OME-TIFF metadata</summary>
+
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>LGPL-3.0-or-later</project_license>
+
+  <description>
+    <p>
+      OME Rewriter is a tool for editing metadata fields in OME-TIFF files.
+      It can also rewrite plain TIFF files into standards-compliant OME-TIFF
+      files with rich microscope metadata.
+    </p>
+    <p>Features include:</p>
+    <ul>
+      <li>Open and inspect OME-TIFF files, including multi-channel, Z-stack, and time-series images</li>
+      <li>Edit physical voxel sizes, numerical aperture, lens immersion medium, and embedding medium</li>
+      <li>Edit per-channel parameters: microscope type, excitation/emission wavelengths, and pinhole size</li>
+      <li>Rewrite ScanImage TIFF files as standards-compliant OME-TIFF files</li>
+      <li>Save and reload parameter sets (JSON) for quick re-use across acquisitions</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.bothlab.omerewriter.desktop</launchable>
+
+  <url type="homepage">https://github.com/bothlab/omerewriter</url>
+  <url type="bugtracker">https://github.com/bothlab/omerewriter/issues</url>
+  <url type="vcs-browser">https://github.com/bothlab/omerewriter</url>
+
+  <developer id="net.tenstral.matthias">
+    <name>Matthias Klumpp</name>
+  </developer>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main application window showing a loaded TIFF file with metadata editor</caption>
+      <image type="source">https://raw.githubusercontent.com/bothlab/omerewriter/main/data/screenshot-v0.1.0.avif</image>
+    </screenshot>
+  </screenshots>
+
+  <content_rating type="oars-1.1"/>
+
+  <keywords>
+    <keyword>TIFF</keyword>
+    <keyword>OME-TIFF</keyword>
+    <keyword>microscopy</keyword>
+    <keyword>metadata</keyword>
+    <keyword>ScanImage</keyword>
+    <keyword>bioimaging</keyword>
+  </keywords>
+
+  <requires>
+    <display_length compare="ge">768</display_length>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </requires>
+</component>
