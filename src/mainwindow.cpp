@@ -6,11 +6,6 @@
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "ometiffimage.h"
-#include "microscopeparamswidget.h"
-#include "metadatajson.h"
-#include "savedparamsmanager.h"
-#include "rangeslider.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -19,6 +14,13 @@
 #include <QSettings>
 #include <QDebug>
 #include <atomic>
+
+#include "ometiffimage.h"
+#include "microscopeparamswidget.h"
+#include "metadatajson.h"
+#include "savedparamsmanager.h"
+#include "rangeslider.h"
+#include "utils.h"
 
 /**
  * @brief Worker class for saving OME-TIFF files in a background thread
@@ -355,11 +357,11 @@ void MainWindow::saveCurrentFile(bool quicksave)
     QString tempFile;
     if (wasOmeTiff) {
         destFilename = m_tiffImage->filename();
-        tempFile = tiffDir.absoluteFilePath(tiffBasename + ".tmp.ome.tiff");
+        tempFile = tiffDir.absoluteFilePath("_tmp-" + createRandomString(6) + "_" + tiffBasename + ".ome.tiff");
     } else {
         // For raw TIFF, we save the modified OME-TIFF alongside the original, with a modified name
         destFilename = tiffDir.absoluteFilePath(tiffBasename + ".ome.tiff");
-        tempFile = tiffDir.absoluteFilePath(tiffBasename + ".tmp.ome.tiff");
+        tempFile = tiffDir.absoluteFilePath("_tmp-" + createRandomString(6) + "_" + tiffBasename + ".ome.tiff");
 
         if (QFile::exists(destFilename)) {
             auto result = QMessageBox::question(

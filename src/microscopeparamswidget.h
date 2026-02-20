@@ -64,7 +64,6 @@ private slots:
 private:
     void updateChannelUI(int channelIndex);
     void saveCurrentChannelData();
-    QString formatDataSize(size_t bytes) const;
 
     Ui::MicroscopeParamsWidget *ui;
     ImageMetadata m_metadata;

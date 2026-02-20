@@ -20,6 +20,8 @@ qt_add_executable(OMERewriter
         metadatajson.cpp
         savedparamsmanager.h
         savedparamsmanager.cpp
+        utils.h
+        utils.cpp
 )
 
 target_include_directories(OMERewriter SYSTEM PRIVATE

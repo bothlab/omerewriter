@@ -10,6 +10,8 @@
 #include <QDebug>
 #include <QFileInfo>
 
+#include "utils.h"
+
 using namespace ome::xml::model;
 
 MicroscopeParamsWidget::MicroscopeParamsWidget(QWidget *parent)
@@ -329,23 +331,4 @@ void MicroscopeParamsWidget::saveCurrentChannelData()
     ch.pinholeSizeNm = ui->spinPinholeNm->value();
     ch.exWavelengthNm = ui->spinExcitationNm->value();
     ch.emWavelengthNm = ui->spinEmissionNm->value();
-}
-
-QString MicroscopeParamsWidget::formatDataSize(size_t bytes) const
-{
-    const double KB = 1024.0;
-    const double MB = KB * 1024.0;
-    const double GB = MB * 1024.0;
-    const double TB = GB * 1024.0;
-
-    if (bytes >= TB)
-        return QString("%1 TiB").arg(bytes / TB, 0, 'f', 2);
-    if (bytes >= GB)
-        return QString("%1 GiB").arg(bytes / GB, 0, 'f', 2);
-    if (bytes >= MB)
-        return QString("%1 MiB").arg(bytes / MB, 0, 'f', 1);
-    if (bytes >= KB)
-        return QString("%1 KiB").arg(bytes / KB, 0, 'f', 1);
-
-    return QString("%1 B").arg(bytes);
 }
