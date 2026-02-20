@@ -51,6 +51,7 @@ private:
     void resetSliderValues();
     void updateSliderRanges();
     void setNavigationEnabled(bool enabled);
+    void updateContrastSliderRange(const ImageMetadata &metadata);
     void saveCurrentFile(bool quicksave);
     bool performSaveWithProgress(const QString &filename, const ImageMetadata &metadata);
     void updateSavedParamsList();

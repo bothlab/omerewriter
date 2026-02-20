@@ -66,6 +66,8 @@ static const char *fragmentShaderSource =
     "uniform vec4 bgColor;\n"
     "uniform lowp float showSaturation;\n"
     "uniform lowp float isGrayscale;\n"
+    "uniform float minPixelValue;\n"
+    "uniform float maxPixelValue;\n"
     "\n"
     "void main()\n"
     "{\n"
@@ -82,6 +84,11 @@ static const char *fragmentShaderSource =
     "        FragColor = bgColor;\n" // Bars around image
     "    } else {\n"
     "        vec4 texColor = texture(tex, sceneCoord);\n"
+    "        // Apply contrast mapping\n"
+    "        if (maxPixelValue > minPixelValue) {\n"
+    "            texColor = (texColor - minPixelValue) / (maxPixelValue - minPixelValue);\n"
+    "            texColor = clamp(texColor, 0.0, 1.0);\n"
+    "        }\n"
     "        if (isGrayscale > 0.5) {\n"
     "            FragColor = vec4(texColor.rrr, 1.0);\n"
     "        } else {\n"
@@ -113,7 +120,11 @@ public:
           lastBgColor(-1.0f, -1.0f, -1.0f, -1.0f),
           pboIndex(0),
           pboSize(0),
-          imageDataChanged(false)
+          imageDataChanged(false),
+          pixelRangeMin(0),
+          pixelRangeMax(65535),
+          lastPixelRangeMin(-1),
+          lastPixelRangeMax(-1)
     {
         pboIds[0] = pboIds[1] = 0;
     }
@@ -147,6 +158,12 @@ public:
     int pboIndex;
     size_t pboSize;
     bool imageDataChanged; // Flag to track when new image data needs immediate upload
+
+    // Pixel range for contrast adjustment
+    int pixelRangeMin;
+    int pixelRangeMax;
+    int lastPixelRangeMin;
+    int lastPixelRangeMax;
 
     void setupTextureFormat(int channels, int bytesPerChannel)
     {
@@ -251,6 +268,12 @@ void ImageViewWidget::initializeGL()
 
     d->vbo.release();
     d->vao.release();
+
+    // Initialize shader uniforms with default values
+    d->shaderProgram.bind();
+    d->shaderProgram.setUniformValue("minPixelValue", 0.0f);
+    d->shaderProgram.setUniformValue("maxPixelValue", 1.0f);
+    d->shaderProgram.release();
 
     // Initialize PBOs for async texture uploads (if supported)
     d->pboIds[0] = d->pboIds[1] = 0;
@@ -384,6 +407,19 @@ void ImageViewWidget::renderImage()
         d->lastHighlightSaturation = d->highlightSaturation;
     }
 
+    // Update pixel range uniforms for contrast adjustment
+    if (d->pixelRangeMin != d->lastPixelRangeMin || d->pixelRangeMax != d->lastPixelRangeMax) {
+        // Normalize to 0-1 range based on bit depth
+        const float maxValue = (bytesPerChannel == 2) ? 65535.0f : 255.0f;
+        const float minNorm = static_cast<float>(d->pixelRangeMin) / maxValue;
+        const float maxNorm = static_cast<float>(d->pixelRangeMax) / maxValue;
+
+        d->shaderProgram.setUniformValue("minPixelValue", minNorm);
+        d->shaderProgram.setUniformValue("maxPixelValue", maxNorm);
+        d->lastPixelRangeMin = d->pixelRangeMin;
+        d->lastPixelRangeMax = d->pixelRangeMax;
+    }
+
     d->vao.bind();
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     d->vao.release();
@@ -425,6 +461,32 @@ void ImageViewWidget::setHighlightSaturation(bool enabled)
 bool ImageViewWidget::highlightSaturation() const
 {
     return d->highlightSaturation;
+}
+
+void ImageViewWidget::setPixelRange(int minValue, int maxValue)
+{
+    if (minValue > maxValue)
+        std::swap(minValue, maxValue);
+
+    d->pixelRangeMin = minValue;
+    d->pixelRangeMax = maxValue;
+    update();
+}
+
+void ImageViewWidget::getPixelRange(int &minValue, int &maxValue) const
+{
+    minValue = d->pixelRangeMin;
+    maxValue = d->pixelRangeMax;
+}
+
+int ImageViewWidget::pixelRangeMin() const
+{
+    return d->pixelRangeMin;
+}
+
+int ImageViewWidget::pixelRangeMax() const
+{
+    return d->pixelRangeMax;
 }
 
 bool ImageViewWidget::usesGLES() const

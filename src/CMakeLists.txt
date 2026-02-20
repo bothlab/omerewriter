@@ -12,6 +12,8 @@ qt_add_executable(OMERewriter
         elidedlabel.cpp
         imageviewwidget.h
         imageviewwidget.cpp
+        rangeslider.h
+        rangeslider.cpp
         ometiffimage.h
         ometiffimage.cpp
         metadatajson.h

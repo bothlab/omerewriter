@@ -10,6 +10,7 @@
 #include "microscopeparamswidget.h"
 #include "metadatajson.h"
 #include "savedparamsmanager.h"
+#include "rangeslider.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -102,6 +103,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->sliderZ, &QSlider::valueChanged, this, &MainWindow::onSliderZChanged);
     connect(ui->sliderT, &QSlider::valueChanged, this, &MainWindow::onSliderTChanged);
     connect(ui->sliderC, &QSlider::valueChanged, this, &MainWindow::onSliderCChanged);
+    connect(ui->contrastSlider, &RangeSlider::valuesChanged, ui->imageView, &ImageViewWidget::setPixelRange);
 
     // Sync spinboxes with sliders
     connect(ui->sliderZ, &QSlider::valueChanged, ui->spinBoxZ, &QSpinBox::setValue);
@@ -178,14 +180,18 @@ void MainWindow::openFile()
     // Enable navigation controls
     setNavigationEnabled(true);
 
-    // Display the first image
-    updateImage();
-
     // Load and display metadata in the params widget
     ImageMetadata metadata = m_tiffImage->extractMetadata(0);
     if (metadata.imageName.isEmpty()) {
         metadata.imageName = fileInfo.fileName();
     }
+
+    // Initialize contrast slider BEFORE displaying the image
+    updateContrastSliderRange(metadata);
+
+    // Display the first image
+    updateImage();
+
     ui->imageMetaWidget->setMetadata(metadata);
 
     // Update status bar
@@ -251,6 +257,37 @@ void MainWindow::setNavigationEnabled(bool enabled)
     ui->spinBoxZ->setEnabled(enabled);
     ui->spinBoxT->setEnabled(enabled);
     ui->spinBoxC->setEnabled(enabled);
+}
+
+void MainWindow::updateContrastSliderRange(const ImageMetadata &metadata)
+{
+    // Determine maximum pixel value based on image bit depth
+    int maxPixelValue = 255; // Default to 8-bit
+
+    if (metadata.pixelType.contains("uint16", Qt::CaseInsensitive)
+        || metadata.pixelType.contains("int16", Qt::CaseInsensitive)) {
+        maxPixelValue = 65535;
+    } else if (
+        metadata.pixelType.contains("uint32", Qt::CaseInsensitive)
+        || metadata.pixelType.contains("int32", Qt::CaseInsensitive)) {
+        // 32-bit images are typically normalized to 16-bit in the reader
+        maxPixelValue = 65535;
+    } else if (metadata.pixelType.contains("float", Qt::CaseInsensitive)) {
+        // Float images are normalized to 16-bit in the reader
+        maxPixelValue = 65535;
+    }
+
+    qDebug() << "Initializing contrast slider for pixel type:" << metadata.pixelType << "with range 0 -"
+             << maxPixelValue;
+
+    // Block signals temporarily to avoid triggering updates during setup
+    ui->contrastSlider->blockSignals(true);
+    ui->contrastSlider->setRange(0, maxPixelValue);
+    ui->contrastSlider->setValues(0, maxPixelValue);
+    ui->contrastSlider->blockSignals(false);
+
+    // Always set the pixel range explicitly to ensure it's applied
+    ui->imageView->setPixelRange(0, maxPixelValue);
 }
 
 void MainWindow::updateImage()
@@ -481,6 +518,9 @@ void MainWindow::onInterleavedChannelsChanged(int count)
     if (metadata.imageName.isEmpty())
         metadata.imageName = fileInfo.fileName();
     ui->imageMetaWidget->setMetadata(metadata);
+
+    // Reset contrast slider in case the bit depth or interpretation changed
+    updateContrastSliderRange(metadata);
 
     statusBar()->showMessage(QStringLiteral("Reinterpreted with %1 channels - Size: %2x%3, Z:%4 T:%5 C:%6")
                                  .arg(count)

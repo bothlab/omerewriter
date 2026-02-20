@@ -40,6 +40,11 @@ public slots:
     void setHighlightSaturation(bool enabled);
     [[nodiscard]] bool highlightSaturation() const;
 
+    void setPixelRange(int minValue, int maxValue);
+    void getPixelRange(int &minValue, int &maxValue) const;
+    [[nodiscard]] int pixelRangeMin() const;
+    [[nodiscard]] int pixelRangeMax() const;
+
     [[nodiscard]] bool usesGLES() const;
 
 protected:
