@@ -61,6 +61,11 @@ if(WIN32)
     set_target_properties(OMERewriter PROPERTIES
         VS_DPI_AWARE "PerMonitor"
     )
+
+    install(
+        FILES "${_ico_out}"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/"
+    )
 endif()
 
 target_include_directories(OMERewriter SYSTEM PRIVATE
