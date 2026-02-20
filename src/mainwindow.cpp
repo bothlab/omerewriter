@@ -86,6 +86,8 @@ MainWindow::MainWindow(QWidget *parent)
       m_savedParamsManager(std::make_unique<SavedParamsManager>(this))
 {
     ui->setupUi(this);
+    updateThemeIcons();
+    connect(qApp, &QApplication::paletteChanged, this, &MainWindow::updateThemeIcons);
 
     // Menu actions
     ui->menuView->addAction(ui->viewDockWidget->toggleViewAction());
@@ -806,6 +808,14 @@ void MainWindow::loadParametersFromFile(const QString &filePath)
 
     QFileInfo fileInfo(filePath);
     statusBar()->showMessage(QStringLiteral("Parameters loaded from: %1").arg(fileInfo.fileName()), 5000);
+}
+
+void MainWindow::updateThemeIcons()
+{
+    // Use the window-text colour to detect a dark theme: if it's brighter than
+    // mid-grey the background must be dark, so we need the light-coloured icon.
+    const bool darkTheme = qApp->palette().color(QPalette::WindowText).lightness() > 128;
+    ui->btnQuickSave->setIcon(QIcon(darkTheme ? ":/icons/quicksave-dark" : ":/icons/quicksave"));
 }
 
 void MainWindow::saveWindowState()

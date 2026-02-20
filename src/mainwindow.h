@@ -60,6 +60,7 @@ private:
 
     void saveWindowState();
     void restoreWindowState();
+    void updateThemeIcons();
 
     QString getLastDirectory(const QString &key, const QString &defaultDir = QString()) const;
     void setLastDirectory(const QString &key, const QString &filePath);

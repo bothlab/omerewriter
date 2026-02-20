@@ -1,5 +1,7 @@
 <RCC>
     <qresource prefix="/icons">
         <file alias="appicon">../data/omerewriter.svg</file>
+        <file alias="quicksave-dark">../data/actions/quicksave-dark.svg</file>
+        <file alias="quicksave">../data/actions/quicksave.svg</file>
     </qresource>
 </RCC>
