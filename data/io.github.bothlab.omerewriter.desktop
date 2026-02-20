@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=OME Rewriter
+Comment=View and rewrite OME-TIFF metadata
+Exec=OMERewriter
+Icon=omerewriter
+Type=Application
+Categories=Science;ImageProcessing;

@@ -22,6 +22,7 @@ qt_add_executable(OMERewriter
         savedparamsmanager.cpp
         utils.h
         utils.cpp
+        resources.qrc
 )
 
 target_include_directories(OMERewriter SYSTEM PRIVATE
@@ -35,6 +36,7 @@ target_link_libraries(OMERewriter
         PRIVATE
         Qt::Core
         Qt::Widgets
+        Qt::Svg
         Qt::OpenGLWidgets
         OME::Files
 )
