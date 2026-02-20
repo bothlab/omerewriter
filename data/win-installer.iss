@@ -61,7 +61,7 @@ Source: "{#DeployDir}\share\*"; DestDir: "{app}"; Flags: recursesubdirs createal
 
 ; Licence / readme that the CI copies to the install root
 Source: "{#DeployDir}\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#DeployDir}\README.md";   DestDir: "{app}"; Flags: ignoreversion isreadme
+Source: "{#DeployDir}\README.md";   DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}";         Filename: "{app}\{#MyAppExeName}"
