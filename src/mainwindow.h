@@ -61,6 +61,9 @@ private:
     void saveWindowState();
     void restoreWindowState();
 
+    QString getLastDirectory(const QString &key, const QString &defaultDir = QString()) const;
+    void setLastDirectory(const QString &key, const QString &filePath);
+
     Ui::MainWindow *ui;
     std::unique_ptr<OMETiffImage> m_tiffImage;
     std::unique_ptr<SavedParamsManager> m_savedParamsManager;

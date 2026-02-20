@@ -208,15 +208,20 @@ bool MainWindow::openFile(const QString &filename)
 
 void MainWindow::onOpenFile()
 {
+    const auto lastDir = getLastDirectory("openTiff");
+
     QString filename = QFileDialog::getOpenFileName(
         this,
         QStringLiteral("Open TIFF Image"),
-        QString(),
+        lastDir,
         QStringLiteral(
             "All TIFF Files (*.ome.tiff *.ome.tif *.tiff *.tif);;OME-TIFF Files (*.ome.tiff *.ome.tif);;TIFF Files "
             "(*.tiff *.tif);;All Files (*)"));
 
-    openFile(filename);
+    if (!filename.isEmpty()) {
+        setLastDirectory("openTiff", filename);
+        openFile(filename);
+    }
 }
 
 void MainWindow::updateSliderRanges()
@@ -454,14 +459,16 @@ void MainWindow::onSaveFileAs()
         return;
     }
 
+    const auto lastDir = getLastDirectory("saveTiff", getLastDirectory("openTiff"));
     QString filename = QFileDialog::getSaveFileName(
         this,
         QStringLiteral("Save OME-TIFF As"),
-        QString(),
+        lastDir,
         QStringLiteral("OME-TIFF Files (*.ome.tiff *.ome.tif);;All Files (*)"));
 
     if (filename.isEmpty())
         return;
+    setLastDirectory("saveTiff", filename);
 
     // Ensure proper extension
     if (!filename.endsWith(".ome.tiff", Qt::CaseInsensitive) && !filename.endsWith(".ome.tif", Qt::CaseInsensitive))
@@ -634,14 +641,17 @@ void MainWindow::onSaveParamsClicked()
 {
     const auto metadata = ui->imageMetaWidget->getMetadata();
 
+    const auto lastDir = getLastDirectory("saveParams");
     auto filename = QFileDialog::getSaveFileName(
         this,
         QStringLiteral("Save Microscope Parameters"),
-        QString(),
+        lastDir,
         QStringLiteral("JSON Files (*.json);;All Files (*)"));
 
     if (filename.isEmpty())
         return;
+    setLastDirectory("saveParams", filename);
+
     if (!filename.endsWith(".json", Qt::CaseInsensitive))
         filename += ".json";
 
@@ -659,14 +669,16 @@ void MainWindow::onSaveParamsClicked()
 
 void MainWindow::onLoadParamsClicked()
 {
+    const auto lastDir = getLastDirectory("loadParams", getLastDirectory("saveParams"));
     const auto filename = QFileDialog::getOpenFileName(
         this,
         QStringLiteral("Load Microscope Parameters"),
-        QString(),
+        lastDir,
         QStringLiteral("JSON Files (*.json);;All Files (*)"));
 
     if (filename.isEmpty())
         return;
+    setLastDirectory("loadParams", filename);
 
     loadParametersFromFile(filename);
 
@@ -814,4 +826,32 @@ void MainWindow::restoreWindowState()
     const QByteArray state = settings.value("window/state").toByteArray();
     if (!state.isEmpty())
         restoreState(state);
+}
+
+QString MainWindow::getLastDirectory(const QString &key, const QString &defaultDir) const
+{
+    QSettings settings("OMERewriter", "OMERewriter");
+    QString lastDir = settings.value("directories/" + key).toString();
+
+    if (lastDir.isEmpty())
+        return defaultDir;
+    if (!QDir(lastDir).exists())
+        return QDir::homePath();
+
+    return lastDir;
+}
+
+void MainWindow::setLastDirectory(const QString &key, const QString &filePath)
+{
+    if (filePath.isEmpty())
+        return;
+
+    QFileInfo fileInfo(filePath);
+    QString dirPath = fileInfo.isDir() ? fileInfo.absoluteFilePath() : fileInfo.absolutePath();
+
+    if (QDir(dirPath).exists()) {
+        QSettings settings("OMERewriter", "OMERewriter");
+        settings.setValue("directories/" + key, dirPath);
+        settings.sync();
+    }
 }
