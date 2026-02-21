@@ -1,10 +1,14 @@
 #define MyAppName      "OMERewriter"
-#define MyAppVersion   "0.1.0"
 #define MyAppPublisher "Matthias Klumpp"
 #define MyAppURL       "https://github.com/bothlab/omerewriter"
 #define MyAppExeName   "OMERewriter.exe"
-; Relative path to the CMake install tree produced by the CI (install/OMERewriter/)
-#define DeployDir      "..\install\OMERewriter"
+; These can be overridden from the command line:
+#ifndef MyAppVersion
+  #define MyAppVersion "0.1.0"
+#endif
+#ifndef DeployDir
+  #define DeployDir "..\install\OMERewriter"
+#endif
 
 [Setup]
 AppId={{BBF09373-0A38-451C-83E3-AE5673BB13A1}}
@@ -31,9 +35,9 @@ PrivilegesRequiredOverridesAllowed=dialog
 LicenseFile={#DeployDir}\LICENSE.txt
 
 OutputDir=output
-OutputBaseFilename={#MyAppName}-Setup-{#MyAppVersion}
+OutputBaseFilename={#MyAppName}-{#MyAppVersion}_Setup
 SetupIconFile={#DeployDir}\share\icons\omerewriter.ico
-UninstallDisplayIcon={app}\{#MyAppExeName}
+UninstallDisplayIcon={app}\bin\{#MyAppExeName}
 
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -53,24 +57,13 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "{#DeployDir}\bin\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-
-; Qt runtime, OME libraries, plugins, and everything else windeployqt placed in bin/
-Source: "{#DeployDir}\bin\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion; Excludes: "{#MyAppExeName}"
-Source: "{#DeployDir}\share\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
-
-; Licence / readme that the CI copies to the install root
+Source: "{#DeployDir}\bin\{#MyAppExeName}"; DestDir: "{app}\bin"; Flags: ignoreversion
+Source: "{#DeployDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion; Excludes: "bin\{#MyAppExeName},LICENSE.txt"
 Source: "{#DeployDir}\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#DeployDir}\README.md";   DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\{#MyAppName}";         Filename: "{app}\{#MyAppExeName}"
-Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-
-[UninstallDelete]
-; Remove any files the app writes next to itself at runtime
-Type: filesandordirs; Name: "{app}\*.log"
+Name: "{group}\{#MyAppName}";         Filename: "{app}\bin\{#MyAppExeName}"
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\bin\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\bin\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent

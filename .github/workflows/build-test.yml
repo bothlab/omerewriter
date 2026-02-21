@@ -41,7 +41,6 @@ jobs:
       - uses: msys2/setup-msys2@v2
         with:
           msystem: ucrt64
-          path-type: inherit
           update: true
           pacboy: >-
             git
@@ -116,35 +115,33 @@ jobs:
           # Cleanup
           rm -rf $DEPLOY_DIR/cmake
           rm -rf $DEPLOY_DIR/include
-          rm -f $DEPLOY_DIR/lib/*.a
+          rm -rf $DEPLOY_DIR/libexec
+          find $DEPLOY_DIR/lib/ -maxdepth 1 -type f -name '*.a' -delete
 
       - name: Derive version string
         run: |
-          # Derive a clean version string: strip leading 'v' from tags, use '0.0.0-dev' otherwise
           REF="${{ github.ref }}"
           if [[ "$REF" == refs/tags/v* ]]; then
             VERSION="${REF#refs/tags/v}"
-          elif [[ "$REF" == refs/tags/* ]]; then
-            VERSION="${REF#refs/tags/}"
           else
-            VERSION="0.0.0-dev"
+            VERSION="0.0.0"
           fi
-          echo "INSTALLER_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
 
       - name: Build installer
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
         with:
           path: data/win-installer.iss
-          options: /DMyAppVersion=${{ env.INSTALLER_VERSION }} /DDeployDir=..\install\OMERewriter
+          options: /DMyAppVersion=${{ env.APP_VERSION }} /DDeployDir=..\install\OMERewriter
 
       - name: Upload snapshot installer
         uses: actions/upload-artifact@v6
         with:
-          name: OMERewriter-installer_win64-${{ env.INSTALLER_VERSION }}
-          path: data/output/OMERewriter-Setup-*.exe
+          name: OMERewriter-${{ env.APP_VERSION }}_setup_win64
+          path: data/output/OMERewriter-*_Setup.exe
 
       - name: Upload snapshot ZIP
         uses: actions/upload-artifact@v6
         with:
-          name: OMERewriter_win64-${{ env.INSTALLER_VERSION }}
+          name: OMERewriter-${{ env.APP_VERSION }}_win64
           path: install/
