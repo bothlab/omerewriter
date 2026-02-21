@@ -68,10 +68,14 @@ if(WIN32)
     )
 endif()
 
-target_include_directories(OMERewriter SYSTEM PRIVATE
-        "${omefiles_SOURCE_DIR}/lib"
-        "${omefiles_BINARY_DIR}/lib"
-)
+# We need to include this explicitly if we fetched the dependency instead of
+# using the system-installed one.
+if(DEFINED omefiles_SOURCE_DIR)
+    target_include_directories(OMERewriter SYSTEM PRIVATE
+            "${omefiles_SOURCE_DIR}/lib"
+            "${omefiles_BINARY_DIR}/lib"
+    )
+endif()
 target_include_directories(OMERewriter PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}"
 )
