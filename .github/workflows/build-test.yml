@@ -1,6 +1,15 @@
 name: Build Test
 
-on: [push, pull_request, workflow_call]
+on:
+  push:
+  pull_request:
+  workflow_call:
+    inputs:
+      optimize:
+        description: 'Create optimized release artifacts'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   build-debian-testing:
@@ -13,7 +22,7 @@ jobs:
         run: cd tests/ci/ && podman build -t omerewriter -f ./Dockerfile-debian-testing .
 
       - name: Build & Test
-        run: podman run -t -e CC=gcc -e CXX=g++ -v `pwd`:/build omerewriter
+        run: podman run -t -e CC=gcc -e CXX=g++ -e CMAKE_BUILD_TYPE=${{ inputs.optimize && 'Release' || 'Debug' }} -v `pwd`:/build omerewriter
           ./tests/ci/build-and-test.sh
 
   build-ubuntu-lts:
@@ -26,7 +35,7 @@ jobs:
       run: cd tests/ci/ && podman build -t omerewriter -f ./Dockerfile-ubuntu-lts .
 
     - name: Build & Test
-      run: podman run -t -e CC=gcc -e CXX=g++ -v `pwd`:/build omerewriter
+      run: podman run -t -e CC=gcc -e CXX=g++ -e CMAKE_BUILD_TYPE=${{ inputs.optimize && 'Release' || 'Debug' }} -v `pwd`:/build omerewriter
            ./tests/ci/build-and-test.sh
 
   build-windows:
@@ -79,7 +88,7 @@ jobs:
       - name: Configure
         run: |
           cmake -GNinja -Bbuild \
-            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_BUILD_TYPE=${{ inputs.optimize && 'Release' || 'RelWithDebInfo' }} \
             -DBUILD_SHARED_LIBS=OFF \
             -DCMAKE_INSTALL_PREFIX="$GITHUB_WORKSPACE/install/OMERewriter" \
             -DPython3_EXECUTABLE="$(cygpath -w "$PWD/venv/bin/python")" \
@@ -134,13 +143,13 @@ jobs:
           path: data/win-installer.iss
           options: /DMyAppVersion=${{ env.APP_VERSION }} /DDeployDir=..\install\OMERewriter
 
-      - name: Upload snapshot installer
+      - name: Upload installer
         uses: actions/upload-artifact@v6
         with:
           name: OMERewriter-${{ env.APP_VERSION }}_setup_win64
           path: data/output/OMERewriter-*_Setup.exe
 
-      - name: Upload snapshot ZIP
+      - name: Upload portable ZIP
         uses: actions/upload-artifact@v6
         with:
           name: OMERewriter-${{ env.APP_VERSION }}_win64

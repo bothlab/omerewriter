@@ -12,6 +12,8 @@ jobs:
   build-test:
     name: Build & Test
     uses: ./.github/workflows/build-test.yml
+    with:
+      optimize: true
 
   release:
     name: Create Release

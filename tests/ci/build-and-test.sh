@@ -16,6 +16,7 @@ $CXX --version
 # configure build with all flags enabled
 mkdir build && cd build
 cmake -GNinja \
+    -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE:-Debug}" \
     ..
 
 # Build, Test & Install
