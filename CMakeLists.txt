@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.19)
 project(OMERewriter
         LANGUAGES CXX
         DESCRIPTION "View and rewrite OME-TIFF metadata"
-        VERSION 0.1.0
+        VERSION 0.1.1
 )
 
 set(CMAKE_CXX_STANDARD 23)
