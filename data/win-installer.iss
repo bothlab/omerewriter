@@ -59,6 +59,14 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
+[InstallDelete]
+; Remove the entire deployed tree before installing so that upgrading
+; over an existing version leaves no stale files from the previous release.
+Type: filesandordirs; Name: "{app}\bin"
+Type: filesandordirs; Name: "{app}\lib"
+Type: filesandordirs; Name: "{app}\libexec"
+Type: filesandordirs; Name: "{app}\share"
+
 [Files]
 Source: "{#DeployDir}\bin\{#AppExeName}"; DestDir: "{app}\bin"; Flags: ignoreversion
 Source: "{#DeployDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion; Excludes: "bin\{#AppExeName},LICENSE.txt"
