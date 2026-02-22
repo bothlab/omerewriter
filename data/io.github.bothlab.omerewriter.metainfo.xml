@@ -52,9 +52,9 @@
     <keyword>bioimaging</keyword>
   </keywords>
 
-  <requires>
+  <recommends>
     <display_length compare="ge">768</display_length>
     <control>keyboard</control>
     <control>pointing</control>
-  </requires>
+  </recommends>
 </component>
