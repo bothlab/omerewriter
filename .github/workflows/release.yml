@@ -60,17 +60,9 @@ jobs:
           mkdir -p release_assets
 
           # Package the installer artifact
-          INSTALLER_DIR="artifacts/OMERewriter-${VERSION}_setup_win64"
+          INSTALLER_DIR="artifacts/OMERewriter-*_setup_win64"
           if [ -d "$INSTALLER_DIR" ]; then
             cp "$INSTALLER_DIR"/*.exe release_assets/
-          fi
-
-          # Package the portable ZIP artifact
-          ZIP_DIR="artifacts/OMERewriter-${VERSION}_win64"
-          if [ -d "$ZIP_DIR" ]; then
-            cd "$ZIP_DIR"
-            zip -r "$GITHUB_WORKSPACE/release_assets/OMERewriter-${VERSION}_win64.zip" .
-            cd "$GITHUB_WORKSPACE"
           fi
 
           echo "Assets to upload:"

@@ -12,6 +12,32 @@ on:
         type: boolean
 
 jobs:
+  get-version:
+    name: Determine revision number
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      version-numeric: ${{ steps.version.outputs.version-numeric }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Determine revision number
+        id: version
+        run: |
+          git_commit=$(git rev-parse --short HEAD)
+          git_current_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo v0.0.0)
+          git_commit_no=$(git rev-list --count "${git_current_tag}..HEAD" 2>/dev/null || git rev-list --count HEAD)
+          VERSION=${git_current_tag#v}; VERSION=${VERSION//-/.}
+          VERSION_NUMERIC=$(echo "${git_current_tag}" | sed 's/^v//;s/[^0-9.].*//')
+          if [ "$git_commit_no" -gt 0 ]; then
+            VERSION+="+git$git_commit_no"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "version-numeric=${VERSION_NUMERIC}" >> $GITHUB_OUTPUT
+
   build-debian-testing:
     name: Debian Testing
     runs-on: ubuntu-latest
@@ -41,9 +67,11 @@ jobs:
   build-windows:
     name: Windows
     runs-on: windows-latest
+    needs: get-version
     defaults:
       run:
         shell: msys2 {0}
+
     steps:
       - uses: actions/checkout@v6
 
@@ -128,30 +156,20 @@ jobs:
           rm -rf $DEPLOY_DIR/libexec
           find $DEPLOY_DIR/lib/ -maxdepth 1 -type f -name '*.a' -delete
 
-      - name: Derive version string
-        run: |
-          REF="${{ github.ref }}"
-          if [[ "$REF" == refs/tags/v* ]]; then
-            VERSION="${REF#refs/tags/v}"
-          else
-            VERSION="0.0.0"
-          fi
-          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
-
       - name: Build installer
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
         with:
           path: data/win-installer.iss
-          options: /DMyAppVersion=${{ env.APP_VERSION }} /DDeployDir=..\install\OMERewriter
+          options: /DMyAppVersion=${{ needs.get-version.outputs.version-numeric }} /DMyAppVersionNumeric=${{ needs.get-version.outputs.version-numeric }} /DDeployDir=..\install\OMERewriter
 
       - name: Upload installer
         uses: actions/upload-artifact@v6
         with:
-          name: OMERewriter-${{ env.APP_VERSION }}_setup_win64
+          name: OMERewriter-${{ needs.get-version.outputs.version-numeric }}_setup_win64
           path: data/output/OMERewriter-*_Setup.exe
 
       - name: Upload portable ZIP
         uses: actions/upload-artifact@v6
         with:
-          name: OMERewriter-${{ env.APP_VERSION }}_win64
+          name: OMERewriter-${{ needs.get-version.outputs.version-numeric }}_win64
           path: install/

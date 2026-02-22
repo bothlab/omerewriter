@@ -6,6 +6,9 @@
 #ifndef MyAppVersion
   #define MyAppVersion "0.1.0"
 #endif
+#ifndef MyAppVersionNumeric
+  #define MyAppVersionNumeric "0.1.0"
+#endif
 #ifndef DeployDir
   #define DeployDir "..\install\OMERewriter"
 #endif
@@ -21,7 +24,7 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 
 ; Installer exe metadata
-VersionInfoVersion={#MyAppVersion}
+VersionInfoVersion={#MyAppVersionNumeric}
 VersionInfoDescription={#MyAppName} Installer
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoCopyright=Copyright (C) 2025-2026 {#MyAppPublisher}
