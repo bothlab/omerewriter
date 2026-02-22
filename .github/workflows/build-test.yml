@@ -149,6 +149,7 @@ jobs:
           # Misc
           cp LICENSE.LGPL-3.0 $DEPLOY_DIR/LICENSE.txt
           cp README.md $DEPLOY_DIR/
+          cp NEWS.md $DEPLOY_DIR/
 
           # Cleanup
           rm -rf $DEPLOY_DIR/cmake
