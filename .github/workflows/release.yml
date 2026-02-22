@@ -60,7 +60,7 @@ jobs:
           mkdir -p release_assets
 
           # Package the installer artifact
-          INSTALLER_DIR="artifacts/OMERewriter-*_setup_win64"
+          INSTALLER_DIR="artifacts/OMERewriter-${VERSION}_setup_win64"
           if [ -d "$INSTALLER_DIR" ]; then
             cp "$INSTALLER_DIR"/*.exe release_assets/
           fi
