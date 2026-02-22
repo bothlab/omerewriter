@@ -47,6 +47,8 @@ private slots:
     void onQuickLoadParamsClicked();
     void onRemoveParamsFromListClicked();
 
+    void onAbout();
+
 private:
     bool openFile(const QString &filename);
     void resetSliderValues();

@@ -78,6 +78,7 @@ if(DEFINED omefiles_SOURCE_DIR)
 endif()
 target_include_directories(OMERewriter PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_BINARY_DIR}/src"
 )
 target_link_libraries(OMERewriter
         PRIVATE

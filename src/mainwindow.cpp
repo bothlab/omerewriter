@@ -6,6 +6,7 @@
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "config.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -95,6 +96,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionSave, &QAction::triggered, this, &MainWindow::onSaveFile);
     connect(ui->actionSaveAs, &QAction::triggered, this, &MainWindow::onSaveFileAs);
     connect(ui->actionLoadParams, &QAction::triggered, this, &MainWindow::onLoadParamsClicked);
+    connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::onAbout);
     connect(ui->btnLoadTiff, &QPushButton::clicked, this, &MainWindow::onOpenFile);
     connect(ui->btnQuickSave, &QPushButton::clicked, this, &MainWindow::quickSaveFile);
 
@@ -871,4 +873,18 @@ void MainWindow::setLastDirectory(const QString &key, const QString &filePath)
         settings.setValue("directories/" + key, dirPath);
         settings.sync();
     }
+}
+
+void MainWindow::onAbout()
+{
+    QMessageBox::about(
+        this,
+        tr("About OMERewriter"),
+        tr("<h2>OMERewriter</h2>"
+           "<p>Version %1</p>"
+           "<p>A tool to edit common fields in OME-TIFF files and to add metadata to raw TIFFs.</p>"
+           "<p>Copyright &copy; 2025-2026 Matthias Klumpp &lt;matthias@tenstral.net&gt;</p>"
+           "<p>Licensed under the <a href=\"https://www.gnu.org/licenses/lgpl-3.0.html\">"
+           "GNU Lesser General Public License v3.0</a> or later.</p>")
+            .arg(QLatin1String(PROJECT_VERSION)));
 }
