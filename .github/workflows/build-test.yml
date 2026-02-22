@@ -160,7 +160,10 @@ jobs:
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.2
         with:
           path: data/win-installer.iss
-          options: /DMyAppVersion=${{ needs.get-version.outputs.version-numeric }} /DMyAppVersionNumeric=${{ needs.get-version.outputs.version-numeric }} /DDeployDir=..\install\OMERewriter
+          options: >-
+            /DAppVersion=${{ needs.get-version.outputs.version-numeric }}
+            /DAppVersionNumeric=${{ needs.get-version.outputs.version-numeric }}
+            /DDeployDir=..\install\OMERewriter
 
       - name: Upload installer
         uses: actions/upload-artifact@v6

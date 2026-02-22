@@ -1,13 +1,13 @@
-#define MyAppName      "OMERewriter"
-#define MyAppPublisher "Matthias Klumpp"
-#define MyAppURL       "https://github.com/bothlab/omerewriter"
-#define MyAppExeName   "OMERewriter.exe"
+#define AppName      "OMERewriter"
+#define AppPublisher "Matthias Klumpp"
+#define AppURL       "https://github.com/bothlab/omerewriter"
+#define AppExeName   "OMERewriter.exe"
 ; These can be overridden from the command line:
-#ifndef MyAppVersion
-  #define MyAppVersion "0.1.0"
+#ifndef AppVersion
+  #define AppVersion "0.1.0"
 #endif
-#ifndef MyAppVersionNumeric
-  #define MyAppVersionNumeric "0.1.0"
+#ifndef AppVersionNumeric
+  #define AppVersionNumeric "0.1.0"
 #endif
 #ifndef DeployDir
   #define DeployDir "..\install\OMERewriter"
@@ -15,22 +15,22 @@
 
 [Setup]
 AppId={{BBF09373-0A38-451C-83E3-AE5673BB13A1}}
-AppName={#MyAppName}
-AppVersion={#MyAppVersion}
-AppVerName={#MyAppName} {#MyAppVersion}
-AppPublisher={#MyAppPublisher}
-AppPublisherURL={#MyAppURL}
-AppSupportURL={#MyAppURL}
-AppUpdatesURL={#MyAppURL}
+AppName={#AppName}
+AppVersion={#AppVersion}
+AppVerName={#AppName} {#AppVersion}
+AppPublisher={#AppPublisher}
+AppPublisherURL={#AppURL}
+AppSupportURL={#AppURL}
+AppUpdatesURL={#AppURL}
 
 ; Installer exe metadata
-VersionInfoVersion={#MyAppVersionNumeric}
-VersionInfoDescription={#MyAppName} Installer
-VersionInfoCompany={#MyAppPublisher}
-VersionInfoCopyright=Copyright (C) 2025-2026 {#MyAppPublisher}
+VersionInfoVersion={#AppVersionNumeric}
+VersionInfoDescription={#AppName} Installer
+VersionInfoCompany={#AppPublisher}
+VersionInfoCopyright=Copyright (C) 2025-2026 {#AppPublisher}
 
-DefaultDirName={autopf}\{#MyAppName}
-DefaultGroupName={#MyAppName}
+DefaultDirName={autopf}\{#AppName}
+DefaultGroupName={#AppName}
 ; Ask for admin rights only when installing system-wide; allows per-user installs too
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
@@ -38,9 +38,9 @@ PrivilegesRequiredOverridesAllowed=dialog
 LicenseFile={#DeployDir}\LICENSE.txt
 
 OutputDir=output
-OutputBaseFilename={#MyAppName}-{#MyAppVersion}_Setup
+OutputBaseFilename={#AppName}-{#AppVersion}_Setup
 SetupIconFile={#DeployDir}\share\icons\omerewriter.ico
-UninstallDisplayIcon={app}\bin\{#MyAppExeName}
+UninstallDisplayIcon={app}\bin\{#AppExeName}
 
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -60,13 +60,13 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "{#DeployDir}\bin\{#MyAppExeName}"; DestDir: "{app}\bin"; Flags: ignoreversion
-Source: "{#DeployDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion; Excludes: "bin\{#MyAppExeName},LICENSE.txt"
+Source: "{#DeployDir}\bin\{#AppExeName}"; DestDir: "{app}\bin"; Flags: ignoreversion
+Source: "{#DeployDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion; Excludes: "bin\{#AppExeName},LICENSE.txt"
 Source: "{#DeployDir}\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\{#MyAppName}";         Filename: "{app}\bin\{#MyAppExeName}"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\bin\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{group}\{#AppName}";         Filename: "{app}\bin\{#AppExeName}"
+Name: "{commondesktop}\{#AppName}"; Filename: "{app}\bin\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\bin\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\bin\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
