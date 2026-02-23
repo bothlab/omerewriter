@@ -10,17 +10,17 @@
 
   <description>
     <p>
-      OME Rewriter is a tool for editing metadata fields in OME-TIFF files.
+      OME Rewriter is a tool for editing metadata fields in 4D OME-TIFF files.
       It can also rewrite plain TIFF files into standards-compliant OME-TIFF
       files with rich microscope metadata.
     </p>
     <p>Features include:</p>
     <ul>
-      <li>Open and inspect OME-TIFF files, including multi-channel, Z-stack, and time-series images</li>
+      <li>Open and inspect OME-TIFF files, including multi-channel Z-stack images</li>
       <li>Edit physical voxel sizes, numerical aperture, lens immersion medium, and embedding medium</li>
       <li>Edit per-channel parameters: microscope type, excitation/emission wavelengths, and pinhole size</li>
-      <li>Rewrite ScanImage TIFF files as standards-compliant OME-TIFF files</li>
-      <li>Save and reload parameter sets (JSON) for quick re-use across acquisitions</li>
+      <li>Deinterleave raw TIFF files as standards-compliant OME-TIFF files</li>
+      <li>Save and reload parameter sets for quick re-use across acquisitions</li>
     </ul>
   </description>
 
