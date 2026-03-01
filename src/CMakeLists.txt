@@ -26,6 +26,33 @@ qt_add_executable(OMERewriter
         $<$<PLATFORM_ID:Windows>:${CMAKE_CURRENT_BINARY_DIR}/omerewriter.rc>
 )
 
+# We need to include this explicitly if we fetched the dependency instead of
+# using the system-installed one.
+if(DEFINED omefiles_SOURCE_DIR)
+    target_include_directories(OMERewriter SYSTEM PRIVATE
+            "${omefiles_SOURCE_DIR}/lib"
+            "${omefiles_BINARY_DIR}/lib"
+    )
+endif()
+target_include_directories(OMERewriter PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_BINARY_DIR}/src"
+)
+target_link_libraries(OMERewriter
+        PRIVATE
+        Qt::Core
+        Qt::Widgets
+        Qt::Svg
+        Qt::OpenGLWidgets
+        OME::Files
+)
+
+install(TARGETS OMERewriter
+        BUNDLE  DESTINATION .
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
 if(WIN32)
     # Convert the SVG icon to a multi-resolution ICO file for the Windows executable.
     find_program(RSVG_CONVERT rsvg-convert REQUIRED)
@@ -66,38 +93,11 @@ if(WIN32)
         FILES "${_ico_out}"
         DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/"
     )
-endif()
 
-# We need to include this explicitly if we fetched the dependency instead of
-# using the system-installed one.
-if(DEFINED omefiles_SOURCE_DIR)
-    target_include_directories(OMERewriter SYSTEM PRIVATE
-            "${omefiles_SOURCE_DIR}/lib"
-            "${omefiles_BINARY_DIR}/lib"
-    )
-endif()
-target_include_directories(OMERewriter PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}"
-        "${CMAKE_BINARY_DIR}/src"
-)
-target_link_libraries(OMERewriter
-        PRIVATE
-        Qt::Core
-        Qt::Widgets
-        Qt::Svg
-        Qt::OpenGLWidgets
-        OME::Files
-)
-
-install(TARGETS OMERewriter
-        BUNDLE  DESTINATION .
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-)
-
-qt_generate_deploy_app_script(
+    qt_generate_deploy_app_script(
         TARGET OMERewriter
         OUTPUT_SCRIPT deploy_script
         NO_UNSUPPORTED_PLATFORM_ERROR
-)
-install(SCRIPT ${deploy_script})
+    )
+    install(SCRIPT ${deploy_script})
+endif()
