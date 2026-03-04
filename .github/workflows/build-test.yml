@@ -167,13 +167,13 @@ jobs:
             /DDeployDir=..\install\OMERewriter
 
       - name: Upload installer
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: OMERewriter-${{ needs.get-version.outputs.version-numeric }}_setup_win64
           path: data/output/OMERewriter-*_Setup.exe
 
       - name: Upload portable ZIP
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: OMERewriter-${{ needs.get-version.outputs.version-numeric }}_win64
           path: install/
