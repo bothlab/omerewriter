@@ -13,6 +13,23 @@ TIFF files into metadata-rich [OME-TIFF](https://ome-model.readthedocs.io/en/sta
 * Deinterleave raw TIFF files to save them as standards-compliant OME-TIFF files
 * Save and reload parameter sets for quick re-use across acquisitions
 
+
+## Download
+
+### Linux
+
+Binaries are published [via Flathub](https://flathub.org/apps/io.github.bothlab.omerewriter):
+
+<a href='https://flathub.org/apps/io.github.bothlab.omerewriter'>
+  <img width='140' alt='Get it on Flathub' src='https://flathub.org/api/badge?locale=en'/>
+</a>
+
+### Windows
+
+You can download an installer that includes a prebuilt version of the application
+from the [releases page](https://github.com/bothlab/omerewriter/releases).
+
+
 ## Building
 
 ### Linux
