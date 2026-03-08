@@ -43,7 +43,7 @@ else()
     FetchContent_Declare(
             omefiles
             GIT_REPOSITORY https://gitlab.com/codelibre/ome/ome-files-cpp.git
-            GIT_TAG        d1abffaa9c1d2143735ce254754410e591882bf2
+            GIT_TAG        62c982fb367c06dd026363910eb0b364b8af0a41
     )
 
     # prefer Qt 6 for the XML parser
@@ -72,16 +72,6 @@ else()
     string(REGEX REPLACE "\n[ \t]*add_subdirectory\\(examples\\)" "\n# add_subdirectory(examples) # Disabled by parent" omefiles_cmake "${omefiles_cmake}")
     string(REGEX REPLACE "\n[ \t]*add_subdirectory\\(test\\)" "\n# add_subdirectory(test) # Disabled by parent" omefiles_cmake "${omefiles_cmake}")
     file(WRITE "${omefiles_SOURCE_DIR}/CMakeLists.txt" "${omefiles_cmake}")
-
-    # Patch CoreMetadata.h to include <memory>, fixes the Windows build
-    file(READ "${omefiles_SOURCE_DIR}/lib/ome/files/CoreMetadata.h" coremetadata_h)
-    if(NOT coremetadata_h MATCHES "#include <memory>")
-        string(REGEX REPLACE
-                "(#include <ome/xml/model/enums/PixelType.h>)"
-                "\\1\n#include <memory>"
-                coremetadata_h "${coremetadata_h}")
-        file(WRITE "${omefiles_SOURCE_DIR}/lib/ome/files/CoreMetadata.h" "${coremetadata_h}")
-    endif()
 endif()
 
 #
