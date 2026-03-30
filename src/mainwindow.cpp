@@ -173,6 +173,11 @@ bool MainWindow::openFile(const QString &filename)
     // Update slider ranges based on the opened file
     updateSliderRanges();
 
+    // Assume no interleaving
+    ui->spinCInterleaveCount->blockSignals(true);
+    ui->spinCInterleaveCount->setValue(1);
+    ui->spinCInterleaveCount->blockSignals(false);
+
     // Reset position to origin
     m_currentZ = 0;
     m_currentT = 0;
