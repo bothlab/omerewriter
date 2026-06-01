@@ -9,6 +9,8 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <cstring>
+#include <string>
+#include <string_view>
 
 #include <ome/files/in/OMETIFFReader.h>
 #include <ome/files/in/TIFFReader.h>
@@ -17,6 +19,10 @@
 #include <ome/files/VariantPixelBuffer.h>
 #include <ome/files/CoreMetadata.h>
 #include <ome/files/MetadataTools.h>
+#include <ome/files/tiff/TIFF.h>
+#include <ome/files/tiff/IFD.h>
+#include <ome/files/tiff/Field.h>
+#include <ome/files/tiff/Tags.h>
 #include <ome/xml/meta/Convert.h>
 #include <ome/xml/meta/OMEXMLMetadata.h>
 #include <ome/xml/model/primitives/Quantity.h>
@@ -27,6 +33,44 @@ using ome::files::dimension_size_type;
 using ome::files::PixelBuffer;
 using ome::files::VariantPixelBuffer;
 typedef ome::xml::model::enums::PixelType PT;
+
+/**
+ * Ensure the OME-XML stored in the first IFD's ImageDescription tag of a freshly
+ * written OME-TIFF starts with an XML declaration.
+ *
+ * ome-files has historically omitted the "<?xml ...?>" declaration when serializing
+ * the OME-XML block. An upstream fix is pending at:
+ * https://gitlab.com/codelibre/ome/ome-files-cpp/-/merge_requests/174
+ * Until a solution is merged upstream though, we patch the files locally to make sure
+ * all software can read them properly.
+ */
+static void ensureXmlDeclaration(const std::string &path)
+{
+    constexpr std::string_view decl("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+
+    auto tiff = ome::files::tiff::TIFF::open(path, "r+");
+    auto ifd = tiff->getDirectoryByIndex(0U);
+
+    std::string xml;
+    ifd->getField(ome::files::tiff::IMAGEDESCRIPTION).get(xml);
+
+    const auto first = xml.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos)
+        return; // empty/whitespace-only description, not OME-XML
+    if (xml[first] != '<')
+        return; // not XML (e.g. plain "OME-TIFF" placeholder)
+    if (xml.compare(first, decl.size(), decl) == 0)
+        return; // declaration already present, nothing to do
+
+    std::string normalized;
+    normalized.reserve(decl.size() + 1 + xml.size() - first);
+    normalized.append(decl);
+    normalized.push_back('\n');
+    normalized.append(xml.substr(first));
+
+    ifd->getField(ome::files::tiff::IMAGEDESCRIPTION).set(normalized);
+    tiff->writeDirectory(ifd);
+}
 
 class OMETiffImage::Private
 {
@@ -1097,6 +1141,9 @@ std::expected<bool, QString> OMETiffImage::saveWithMetadata(
         }
 
         writer->close();
+
+        // Guard against ome-files omitting the XML declaration in the embedded OME-XML.
+        ensureXmlDeclaration(outputPath.toStdString());
 
         qDebug() << "Successfully saved OME-TIFF with modified metadata to:" << outputPath;
         return true;
