@@ -28,8 +28,8 @@ QJsonObject toJson(const ImageMetadata &metadata)
 
     // Optical parameters
     root["numericalAperture"] = metadata.numericalAperture;
-    root["lensImmersion"] = QString::fromStdString(std::string(metadata.lensImmersion));
-    root["embeddingMedium"] = QString::fromStdString(std::string(metadata.embeddingMedium));
+    root["lensImmersion"] = omr::immersionToString(metadata.lensImmersion);
+    root["embeddingMedium"] = omr::mediumToString(metadata.embeddingMedium);
     root["immersionRI"] = metadata.immersionRI;
 
     // Channel parameters
@@ -37,7 +37,7 @@ QJsonObject toJson(const ImageMetadata &metadata)
     for (const auto &ch : metadata.channels) {
         QJsonObject chObj;
         chObj["name"] = ch.name;
-        chObj["acquisitionMode"] = QString::fromStdString(std::string(ch.acquisitionMode));
+        chObj["acquisitionMode"] = omr::acquisitionModeToString(ch.acquisitionMode);
         chObj["exWavelengthNm"] = ch.exWavelengthNm;
         chObj["emWavelengthNm"] = ch.emWavelengthNm;
         chObj["pinholeSizeNm"] = ch.pinholeSizeNm;
@@ -65,15 +65,11 @@ std::expected<ImageMetadata, QString> fromJson(const QJsonObject &json)
     if (json.contains("numericalAperture"))
         metadata.numericalAperture = json["numericalAperture"].toDouble();
 
-    if (json.contains("lensImmersion")) {
-        const auto immersionStr = json["lensImmersion"].toString();
-        metadata.lensImmersion = ome::xml::model::enums::Immersion(immersionStr.toStdString());
-    }
+    if (json.contains("lensImmersion"))
+        metadata.lensImmersion = omr::immersionFromString(json["lensImmersion"].toString());
 
-    if (json.contains("embeddingMedium")) {
-        const auto mediumStr = json["embeddingMedium"].toString();
-        metadata.embeddingMedium = ome::xml::model::enums::Medium(mediumStr.toStdString());
-    }
+    if (json.contains("embeddingMedium"))
+        metadata.embeddingMedium = omr::mediumFromString(json["embeddingMedium"].toString());
 
     if (json.contains("immersionRI"))
         metadata.immersionRI = json["immersionRI"].toDouble();
@@ -91,10 +87,8 @@ std::expected<ImageMetadata, QString> fromJson(const QJsonObject &json)
             if (chObj.contains("name"))
                 ch.name = chObj["name"].toString();
 
-            if (chObj.contains("acquisitionMode")) {
-                QString modeStr = chObj["acquisitionMode"].toString();
-                ch.acquisitionMode = ome::xml::model::enums::AcquisitionMode(modeStr.toStdString());
-            }
+            if (chObj.contains("acquisitionMode"))
+                ch.acquisitionMode = omr::acquisitionModeFromString(chObj["acquisitionMode"].toString());
 
             if (chObj.contains("exWavelengthNm"))
                 ch.exWavelengthNm = chObj["exWavelengthNm"].toDouble();

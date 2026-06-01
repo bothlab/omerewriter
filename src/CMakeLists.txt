@@ -1,4 +1,31 @@
 
+# Core TIFF/OME-XML I/O and metadata model, shared by the GUI app and the CLI.
+add_library(omerw_core STATIC
+        ometiffimage.h
+        ometiffimage.cpp
+        ometypes.h
+        tifffile.h
+        tifffile.cpp
+        omexml.h
+        omexml.cpp
+        ometiffreader.h
+        ometiffreader.cpp
+        ometiffwriter.h
+        ometiffwriter.cpp
+        metadatajson.h
+        metadatajson.cpp
+)
+target_include_directories(omerw_core PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_BINARY_DIR}/src"
+)
+target_link_libraries(omerw_core
+        PUBLIC
+        Qt::Core
+        Qt::Xml
+        TIFF::TIFF
+)
+
 qt_add_executable(OMERewriter
         WIN32 MACOSX_BUNDLE
         main.cpp
@@ -14,10 +41,6 @@ qt_add_executable(OMERewriter
         imageviewwidget.cpp
         rangeslider.h
         rangeslider.cpp
-        ometiffimage.h
-        ometiffimage.cpp
-        metadatajson.h
-        metadatajson.cpp
         savedparamsmanager.h
         savedparamsmanager.cpp
         utils.h
@@ -26,26 +49,27 @@ qt_add_executable(OMERewriter
         $<$<PLATFORM_ID:Windows>:${CMAKE_CURRENT_BINARY_DIR}/omerewriter.rc>
 )
 
-# We need to include this explicitly if we fetched the dependency instead of
-# using the system-installed one.
-if(DEFINED omefiles_SOURCE_DIR)
-    target_include_directories(OMERewriter SYSTEM PRIVATE
-            "${omefiles_SOURCE_DIR}/lib"
-            "${omefiles_BINARY_DIR}/lib"
-    )
-endif()
 target_include_directories(OMERewriter PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}"
         "${CMAKE_BINARY_DIR}/src"
 )
 target_link_libraries(OMERewriter
         PRIVATE
+        omerw_core
         Qt::Core
         Qt::Widgets
         Qt::Svg
         Qt::OpenGLWidgets
-        OME::Files
+        Qt::Xml
+        TIFF::TIFF
 )
+
+# Headless CLI for inspecting and rewriting OME-TIFF files (handy for testing).
+qt_add_executable(omerw-cli
+        cli.cpp
+)
+target_link_libraries(omerw-cli PRIVATE omerw_core Qt::Core)
+install(TARGETS omerw-cli RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 install(TARGETS OMERewriter
         BUNDLE  DESTINATION .

@@ -9,77 +9,20 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <cstring>
-#include <string>
-#include <string_view>
 
-#include <ome/files/in/OMETIFFReader.h>
-#include <ome/files/in/TIFFReader.h>
-#include <ome/files/out/OMETIFFWriter.h>
-#include <ome/files/PixelBuffer.h>
-#include <ome/files/VariantPixelBuffer.h>
-#include <ome/files/CoreMetadata.h>
-#include <ome/files/MetadataTools.h>
-#include <ome/files/tiff/TIFF.h>
-#include <ome/files/tiff/IFD.h>
-#include <ome/files/tiff/Field.h>
-#include <ome/files/tiff/Tags.h>
-#include <ome/xml/meta/Convert.h>
-#include <ome/xml/meta/OMEXMLMetadata.h>
-#include <ome/xml/model/primitives/Quantity.h>
+#include "ometiffreader.h"
+#include "ometiffwriter.h"
+#include "ometypes.h"
 
-#include "ome/xml/meta/DummyMetadata.h"
-
-using ome::files::dimension_size_type;
-using ome::files::PixelBuffer;
-using ome::files::VariantPixelBuffer;
-typedef ome::xml::model::enums::PixelType PT;
-
-/**
- * Ensure the OME-XML stored in the first IFD's ImageDescription tag of a freshly
- * written OME-TIFF starts with an XML declaration.
- *
- * ome-files has historically omitted the "<?xml ...?>" declaration when serializing
- * the OME-XML block. An upstream fix is pending at:
- * https://gitlab.com/codelibre/ome/ome-files-cpp/-/merge_requests/174
- * Until a solution is merged upstream though, we patch the files locally to make sure
- * all software can read them properly.
- */
-static void ensureXmlDeclaration(const std::string &path)
-{
-    constexpr std::string_view decl("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-
-    auto tiff = ome::files::tiff::TIFF::open(path, "r+");
-    auto ifd = tiff->getDirectoryByIndex(0U);
-
-    std::string xml;
-    ifd->getField(ome::files::tiff::IMAGEDESCRIPTION).get(xml);
-
-    const auto first = xml.find_first_not_of(" \t\r\n");
-    if (first == std::string::npos)
-        return; // empty/whitespace-only description, not OME-XML
-    if (xml[first] != '<')
-        return; // not XML (e.g. plain "OME-TIFF" placeholder)
-    if (xml.compare(first, decl.size(), decl) == 0)
-        return; // declaration already present, nothing to do
-
-    std::string normalized;
-    normalized.reserve(decl.size() + 1 + xml.size() - first);
-    normalized.append(decl);
-    normalized.push_back('\n');
-    normalized.append(xml.substr(first));
-
-    ifd->getField(ome::files::tiff::IMAGEDESCRIPTION).set(normalized);
-    tiff->writeDirectory(ifd);
-}
+using omr::dimension_size_type;
+using PT = omr::PixelType;
 
 class OMETiffImage::Private
 {
 public:
-    std::shared_ptr<ome::files::FormatReader> reader;
+    omr::OmeTiffReader reader;
     QString currentFilename;
     bool isOmeTiff = true;
-    dimension_size_type series = 0;
-    dimension_size_type resolution = 0;
 
     // Channel interleaving for raw TIFFs (number of interleaved channels)
     // When > 1, the planes are interpreted as interleaved channels
@@ -94,7 +37,7 @@ public:
     dimension_size_type rawSizeC = 0;
     dimension_size_type rawImageCount = 0;
     dimension_size_type rawRGBChannelCount = 0;
-    PT cachedPixelType = PT::UINT8;
+    PT cachedPixelType = PT::UInt8;
 
     // Effective dimensions after applying interleaving interpretation
     dimension_size_type sizeX = 0;
@@ -107,23 +50,18 @@ public:
 
     void updateCachedDimensions()
     {
-        if (!reader)
+        if (!reader.isOpen())
             return;
 
-        dimension_size_type oldSeries = reader->getSeries();
-        reader->setSeries(series);
-        reader->setResolution(resolution);
-
-        rawSizeX = reader->getSizeX();
-        rawSizeY = reader->getSizeY();
-        rawSizeZ = reader->getSizeZ();
-        rawSizeT = reader->getSizeT();
-        rawSizeC = reader->getEffectiveSizeC();
-        rawImageCount = reader->getImageCount();
-        rawRGBChannelCount = reader->getRGBChannelCount(0);
-        cachedPixelType = reader->getPixelType();
-
-        reader->setSeries(oldSeries);
+        rawSizeX = reader.rawSizeX();
+        rawSizeY = reader.rawSizeY();
+        rawSizeZ = reader.rawSizeZ();
+        rawSizeT = reader.rawSizeT();
+        rawSizeC = reader.rawSizeC();
+        rawImageCount = reader.rawImageCount();
+        rawRGBChannelCount = reader.rawRGBChannelCount();
+        cachedPixelType = reader.pixelType();
+        isOmeTiff = reader.isOmeTiff();
 
         applyInterleavingInterpretation();
     }
@@ -161,7 +99,7 @@ public:
     }
 
     /**
-     * @brief Convert logical (z, c, t) coordinates to raw plane index
+     * @brief Convert logical (z, c, t) coordinates to a raw plane index
      *
      * For interleaved TIFFs, the raw plane order is:
      * plane 0: z=0, c=0
@@ -181,12 +119,7 @@ public:
         }
 
         // For OME-TIFF or non-interleaved, use the reader's native indexing
-        dimension_size_type oldSeries = reader->getSeries();
-        reader->setSeries(series);
-        reader->setResolution(resolution);
-        dimension_size_type index = reader->getIndex(z, c, t);
-        reader->setSeries(oldSeries);
-        return index;
+        return reader.getIndex(z, c, t);
     }
 };
 
@@ -211,53 +144,28 @@ bool OMETiffImage::open(const QString &filename)
         return false;
     }
 
-    try {
-        if (filename.endsWith(".ome.tiff", Qt::CaseInsensitive) || filename.endsWith(".ome.tif", Qt::CaseInsensitive)) {
-            auto omeReader = std::make_shared<ome::files::in::OMETIFFReader>();
-
-            // Create an OMEXMLMetadata store for the reader to populate
-            std::shared_ptr<ome::xml::meta::MetadataStore> metaStore =
-                std::make_shared<ome::xml::meta::OMEXMLMetadata>();
-            omeReader->setMetadataStore(metaStore);
-
-            // Now open the file - this will populate the metadata store
-            omeReader->setId(filename.toStdString());
-            d->reader = omeReader;
-            d->isOmeTiff = true;
-        } else {
-            d->reader = std::make_shared<ome::files::in::TIFFReader>();
-            d->reader->setId(filename.toStdString());
-            d->isOmeTiff = false;
-        }
-        d->currentFilename = filename;
-        d->series = 0;
-        d->resolution = 0;
-        d->updateCachedDimensions();
-
-        qDebug() << "Opened OME-TIFF:" << filename;
-        qDebug().nospace() << "  Dimensions: X=" << d->sizeX << "Y=" << d->sizeY << "Z=" << d->sizeZ << "T=" << d->sizeT
-                           << "C=" << d->sizeC;
-        qDebug() << "  Image count:" << d->imageCount;
-        qDebug() << "  RGB channel count:" << d->rgbChannelCount;
-
-        return true;
-    } catch (const std::exception &e) {
-        qWarning().noquote() << "Failed to open OME-TIFF:" << e.what();
-        d->reader.reset();
+    QString error;
+    if (!d->reader.open(filename, &error)) {
+        qWarning().noquote() << "Failed to open TIFF:" << error;
         return false;
     }
+
+    d->currentFilename = filename;
+    d->isOmeTiff = d->reader.isOmeTiff();
+    d->updateCachedDimensions();
+
+    qDebug() << "Opened image:" << filename;
+    qDebug().nospace() << "  Dimensions: X=" << d->sizeX << "Y=" << d->sizeY << "Z=" << d->sizeZ << "T=" << d->sizeT
+                       << "C=" << d->sizeC;
+    qDebug() << "  Image count:" << d->imageCount;
+    qDebug() << "  RGB channel count:" << d->rgbChannelCount;
+
+    return true;
 }
 
 void OMETiffImage::close()
 {
-    if (d->reader) {
-        try {
-            d->reader->close();
-        } catch (const std::exception &e) {
-            qWarning().noquote() << "Error closing file:" << e.what();
-        }
-        d->reader.reset();
-    }
+    d->reader.close();
     d->currentFilename.clear();
     d->interleavedChannels = 1;
     d->rawSizeX = d->rawSizeY = d->rawSizeZ = d->rawSizeT = d->rawSizeC = 0;
@@ -268,7 +176,7 @@ void OMETiffImage::close()
 
 bool OMETiffImage::isOpen() const
 {
-    return d->reader != nullptr;
+    return d->reader.isOpen();
 }
 
 QString OMETiffImage::filename() const
@@ -289,7 +197,6 @@ std::expected<bool, QString> OMETiffImage::setInterleavedChannelCount(dimension_
     // Never mess with proper OME-TIFF files
     if (d->isOmeTiff)
         return std::unexpected("Cannot set interleaved channel count for OME-TIFF files!");
-    ;
 
     // Make sure the channel count divides evenly into the image count
     if (d->rawImageCount > 0 && channelCount > 1) {
@@ -349,7 +256,7 @@ dimension_size_type OMETiffImage::imageCount() const
     return d->imageCount;
 }
 
-ome::xml::model::enums::PixelType OMETiffImage::pixelType() const
+omr::PixelType OMETiffImage::pixelType() const
 {
     return d->cachedPixelType;
 }
@@ -361,7 +268,7 @@ dimension_size_type OMETiffImage::rgbChannelCount() const
 
 dimension_size_type OMETiffImage::getIndex(dimension_size_type z, dimension_size_type c, dimension_size_type t) const
 {
-    if (!d->reader)
+    if (!d->reader.isOpen())
         return 0;
 
     return d->getPlaneIndex(z, c, t);
@@ -370,270 +277,118 @@ dimension_size_type OMETiffImage::getIndex(dimension_size_type z, dimension_size
 namespace
 {
 
-/**
- * @brief Visitor to convert VariantPixelBuffer to RawImage
- */
-struct PixelBufferToRawImageVisitor {
-    dimension_size_type width;
-    dimension_size_type height;
+// Min/max normalize an arbitrary numeric plane to 16-bit for display.
+template<typename T>
+RawImage normalizeToUint16(const T *src, dimension_size_type width, dimension_size_type height)
+{
     RawImage result;
+    const size_t numPixels = static_cast<size_t>(width) * height;
+    result.data.resize(static_cast<qsizetype>(numPixels * 2));
+    result.width = static_cast<int>(width);
+    result.height = static_cast<int>(height);
+    result.channels = 1;
+    result.bytesPerChannel = 2;
 
-    PixelBufferToRawImageVisitor(dimension_size_type w, dimension_size_type h)
-        : width(w),
-          height(h)
-    {
+    T minVal = src[0], maxVal = src[0];
+    for (size_t i = 1; i < numPixels; ++i) {
+        if (src[i] < minVal)
+            minVal = src[i];
+        if (src[i] > maxVal)
+            maxVal = src[i];
     }
 
-    // Handle 8-bit unsigned
-    void operator()(const std::shared_ptr<PixelBuffer<uint8_t>> &buf)
-    {
-        if (!buf)
-            return;
-        copyData(buf->data(), 1);
+    auto *dst = reinterpret_cast<uint16_t *>(result.data.data());
+    if (maxVal > minVal) {
+        const double scale = 65535.0 / (static_cast<double>(maxVal) - static_cast<double>(minVal));
+        for (size_t i = 0; i < numPixels; ++i)
+            dst[i] = static_cast<uint16_t>((static_cast<double>(src[i]) - static_cast<double>(minVal)) * scale);
+    } else {
+        std::memset(dst, 0, numPixels * 2);
     }
+    return result;
+}
 
-    // Handle 16-bit unsigned
-    void operator()(const std::shared_ptr<PixelBuffer<uint16_t>> &buf)
-    {
-        if (!buf)
-            return;
-        copyData(buf->data(), 2);
-    }
+// Convert one decoded plane to a display-friendly RawImage, reproducing the
+// behaviour the previous ome-files based visitor had.
+RawImage rawPlaneToRawImage(const omr::PlaneData &pd)
+{
+    RawImage result;
+    const dimension_size_type w = pd.width;
+    const dimension_size_type h = pd.height;
+    const unsigned int spp = pd.samplesPerPixel < 1 ? 1 : pd.samplesPerPixel;
+    const size_t numPixels = static_cast<size_t>(w) * h;
+    const size_t numSamples = numPixels * spp;
+    const auto *raw = reinterpret_cast<const uint8_t *>(pd.bytes.constData());
 
-    // Handle 8-bit signed - convert to unsigned
-    void operator()(const std::shared_ptr<PixelBuffer<int8_t>> &buf)
-    {
-        if (!buf)
-            return;
-        const size_t numPixels = width * height;
-        result.data.resize(static_cast<qsizetype>(numPixels));
-        result.width = static_cast<int>(width);
-        result.height = static_cast<int>(height);
-        result.channels = 1;
+    switch (pd.pixelType) {
+    case PT::UInt8:
+    case PT::Bit: {
+        result.width = static_cast<int>(w);
+        result.height = static_cast<int>(h);
+        result.channels = static_cast<int>(spp);
         result.bytesPerChannel = 1;
-
-        const int8_t *src = buf->data();
-        uint8_t *dst = reinterpret_cast<uint8_t *>(result.data.data());
-        for (size_t i = 0; i < numPixels; ++i) {
+        result.data.resize(static_cast<qsizetype>(numSamples));
+        std::memcpy(result.data.data(), raw, numSamples);
+        break;
+    }
+    case PT::UInt16: {
+        result.width = static_cast<int>(w);
+        result.height = static_cast<int>(h);
+        result.channels = static_cast<int>(spp);
+        result.bytesPerChannel = 2;
+        result.data.resize(static_cast<qsizetype>(numSamples * 2));
+        std::memcpy(result.data.data(), raw, numSamples * 2);
+        break;
+    }
+    case PT::Int8: {
+        result.width = static_cast<int>(w);
+        result.height = static_cast<int>(h);
+        result.channels = static_cast<int>(spp);
+        result.bytesPerChannel = 1;
+        result.data.resize(static_cast<qsizetype>(numSamples));
+        const auto *src = reinterpret_cast<const int8_t *>(raw);
+        auto *dst = reinterpret_cast<uint8_t *>(result.data.data());
+        for (size_t i = 0; i < numSamples; ++i)
             dst[i] = static_cast<uint8_t>(static_cast<int>(src[i]) + 128);
-        }
+        break;
     }
-
-    // Handle 16-bit signed - convert to unsigned
-    void operator()(const std::shared_ptr<PixelBuffer<int16_t>> &buf)
-    {
-        if (!buf)
-            return;
-        const size_t numPixels = width * height;
-        result.data.resize(static_cast<qsizetype>(numPixels * 2));
-        result.width = static_cast<int>(width);
-        result.height = static_cast<int>(height);
-        result.channels = 1;
+    case PT::Int16: {
+        result.width = static_cast<int>(w);
+        result.height = static_cast<int>(h);
+        result.channels = static_cast<int>(spp);
         result.bytesPerChannel = 2;
-
-        const int16_t *src = buf->data();
-        uint16_t *dst = reinterpret_cast<uint16_t *>(result.data.data());
-        for (size_t i = 0; i < numPixels; ++i) {
+        result.data.resize(static_cast<qsizetype>(numSamples * 2));
+        const auto *src = reinterpret_cast<const int16_t *>(raw);
+        auto *dst = reinterpret_cast<uint16_t *>(result.data.data());
+        for (size_t i = 0; i < numSamples; ++i)
             dst[i] = static_cast<uint16_t>(static_cast<int>(src[i]) + 32768);
-        }
+        break;
+    }
+    case PT::UInt32:
+        result = normalizeToUint16(reinterpret_cast<const uint32_t *>(raw), w, h);
+        break;
+    case PT::Int32:
+        result = normalizeToUint16(reinterpret_cast<const int32_t *>(raw), w, h);
+        break;
+    case PT::Float:
+        result = normalizeToUint16(reinterpret_cast<const float *>(raw), w, h);
+        break;
+    case PT::Double:
+        result = normalizeToUint16(reinterpret_cast<const double *>(raw), w, h);
+        break;
+    default:
+        qWarning().noquote() << "Pixel type not supported for display";
+        break;
     }
 
-    // Handle 32-bit unsigned - normalize to 16-bit
-    void operator()(const std::shared_ptr<PixelBuffer<uint32_t>> &buf)
-    {
-        if (!buf)
-            return;
-        normalizeToUint16(buf->data());
-    }
-
-    // Handle 32-bit signed - normalize to 16-bit
-    void operator()(const std::shared_ptr<PixelBuffer<int32_t>> &buf)
-    {
-        if (!buf)
-            return;
-        normalizeSignedToUint16(buf->data());
-    }
-
-    // Handle float - normalize to 16-bit
-    void operator()(const std::shared_ptr<PixelBuffer<float>> &buf)
-    {
-        if (!buf)
-            return;
-        normalizeFloatToUint16(buf->data());
-    }
-
-    // Handle double - normalize to 16-bit
-    void operator()(const std::shared_ptr<PixelBuffer<double>> &buf)
-    {
-        if (!buf)
-            return;
-        normalizeDoubleToUint16(buf->data());
-    }
-
-    // Handle bool/bit
-    void operator()(const std::shared_ptr<PixelBuffer<bool>> &buf)
-    {
-        if (!buf)
-            return;
-        const size_t numPixels = width * height;
-        result.data.resize(static_cast<qsizetype>(numPixels));
-        result.width = static_cast<int>(width);
-        result.height = static_cast<int>(height);
-        result.channels = 1;
-        result.bytesPerChannel = 1;
-
-        const bool *src = buf->data();
-        uint8_t *dst = reinterpret_cast<uint8_t *>(result.data.data());
-        for (size_t i = 0; i < numPixels; ++i) {
-            dst[i] = src[i] ? 255 : 0;
-        }
-    }
-
-    // Handle complex types (not supported for display)
-    void operator()(const std::shared_ptr<PixelBuffer<std::complex<float>>> & /* buf */)
-    {
-        qWarning().noquote() << "Complex float pixel types not supported for display";
-    }
-
-    void operator()(const std::shared_ptr<PixelBuffer<std::complex<double>>> & /* buf */)
-    {
-        qWarning().noquote() << "Complex double pixel types not supported for display";
-    }
-
-private:
-    template<typename T>
-    void copyData(const T *src, int bytesPerChan)
-    {
-        const size_t dataSize = width * height * bytesPerChan;
-        result.data.resize(static_cast<qsizetype>(dataSize));
-        result.width = static_cast<int>(width);
-        result.height = static_cast<int>(height);
-        result.channels = 1;
-        result.bytesPerChannel = bytesPerChan;
-        std::memcpy(result.data.data(), src, dataSize);
-    }
-
-    template<typename T>
-    void normalizeToUint16(const T *src)
-    {
-        const size_t numPixels = width * height;
-        result.data.resize(static_cast<qsizetype>(numPixels * 2));
-        result.width = static_cast<int>(width);
-        result.height = static_cast<int>(height);
-        result.channels = 1;
-        result.bytesPerChannel = 2;
-
-        // Find min/max
-        T minVal = src[0], maxVal = src[0];
-        for (size_t i = 1; i < numPixels; ++i) {
-            if (src[i] < minVal)
-                minVal = src[i];
-            if (src[i] > maxVal)
-                maxVal = src[i];
-        }
-
-        uint16_t *dst = reinterpret_cast<uint16_t *>(result.data.data());
-        if (maxVal > minVal) {
-            const double scale = 65535.0 / static_cast<double>(maxVal - minVal);
-            for (size_t i = 0; i < numPixels; ++i) {
-                dst[i] = static_cast<uint16_t>((src[i] - minVal) * scale);
-            }
-        } else {
-            std::memset(dst, 0, numPixels * 2);
-        }
-    }
-
-    template<typename T>
-    void normalizeSignedToUint16(const T *src)
-    {
-        const size_t numPixels = width * height;
-        result.data.resize(static_cast<qsizetype>(numPixels * 2));
-        result.width = static_cast<int>(width);
-        result.height = static_cast<int>(height);
-        result.channels = 1;
-        result.bytesPerChannel = 2;
-
-        T minVal = src[0], maxVal = src[0];
-        for (size_t i = 1; i < numPixels; ++i) {
-            if (src[i] < minVal)
-                minVal = src[i];
-            if (src[i] > maxVal)
-                maxVal = src[i];
-        }
-
-        uint16_t *dst = reinterpret_cast<uint16_t *>(result.data.data());
-        if (maxVal > minVal) {
-            const double scale = 65535.0 / static_cast<double>(maxVal - minVal);
-            for (size_t i = 0; i < numPixels; ++i) {
-                dst[i] = static_cast<uint16_t>((static_cast<double>(src[i]) - minVal) * scale);
-            }
-        } else {
-            std::memset(dst, 0, numPixels * 2);
-        }
-    }
-
-    void normalizeFloatToUint16(const float *src)
-    {
-        const size_t numPixels = width * height;
-        result.data.resize(static_cast<qsizetype>(numPixels * 2));
-        result.width = static_cast<int>(width);
-        result.height = static_cast<int>(height);
-        result.channels = 1;
-        result.bytesPerChannel = 2;
-
-        float minVal = src[0], maxVal = src[0];
-        for (size_t i = 1; i < numPixels; ++i) {
-            if (src[i] < minVal)
-                minVal = src[i];
-            if (src[i] > maxVal)
-                maxVal = src[i];
-        }
-
-        uint16_t *dst = reinterpret_cast<uint16_t *>(result.data.data());
-        if (maxVal > minVal) {
-            const float scale = 65535.0f / (maxVal - minVal);
-            for (size_t i = 0; i < numPixels; ++i) {
-                dst[i] = static_cast<uint16_t>((src[i] - minVal) * scale);
-            }
-        } else {
-            std::memset(dst, 0, numPixels * 2);
-        }
-    }
-
-    void normalizeDoubleToUint16(const double *src)
-    {
-        const size_t numPixels = width * height;
-        result.data.resize(static_cast<qsizetype>(numPixels * 2));
-        result.width = static_cast<int>(width);
-        result.height = static_cast<int>(height);
-        result.channels = 1;
-        result.bytesPerChannel = 2;
-
-        double minVal = src[0], maxVal = src[0];
-        for (size_t i = 1; i < numPixels; ++i) {
-            if (src[i] < minVal)
-                minVal = src[i];
-            if (src[i] > maxVal)
-                maxVal = src[i];
-        }
-
-        uint16_t *dst = reinterpret_cast<uint16_t *>(result.data.data());
-        if (maxVal > minVal) {
-            const double scale = 65535.0 / (maxVal - minVal);
-            for (size_t i = 0; i < numPixels; ++i) {
-                dst[i] = static_cast<uint16_t>((src[i] - minVal) * scale);
-            }
-        } else {
-            std::memset(dst, 0, numPixels * 2);
-        }
-    }
-};
+    return result;
+}
 
 } // anonymous namespace
 
 RawImage OMETiffImage::readPlane(dimension_size_type z, dimension_size_type c, dimension_size_type t)
 {
-    if (!d->reader) {
+    if (!d->reader.isOpen()) {
         qWarning().noquote() << "No file open";
         return {};
     }
@@ -644,273 +399,58 @@ RawImage OMETiffImage::readPlane(dimension_size_type z, dimension_size_type c, d
 
 RawImage OMETiffImage::readPlaneByIndex(dimension_size_type planeIndex)
 {
-    if (!d->reader) {
+    if (!d->reader.isOpen()) {
         qWarning().noquote() << "No file open";
         return {};
     }
 
-    try {
-        dimension_size_type oldSeries = d->reader->getSeries();
-        d->reader->setSeries(d->series);
-        d->reader->setResolution(d->resolution);
-
-        VariantPixelBuffer buf;
-        d->reader->openBytes(planeIndex, buf);
-
-        d->reader->setSeries(oldSeries);
-
-        PixelBufferToRawImageVisitor visitor(d->sizeX, d->sizeY);
-        std::visit(visitor, buf.vbuffer());
-
-        return visitor.result;
-
-    } catch (const std::exception &e) {
-        qWarning().noquote() << "Failed to read plane" << planeIndex << ":" << e.what();
+    QString error;
+    omr::PlaneData plane = d->reader.readPlaneByFileIndex(planeIndex, &error);
+    if (!plane.isValid()) {
+        qWarning().noquote() << "Failed to read plane" << planeIndex << ":" << error;
         return {};
     }
+
+    return rawPlaneToRawImage(plane);
 }
 
-std::shared_ptr<ome::files::FormatReader> OMETiffImage::reader() const
-{
-    return d->reader;
-}
-
-std::shared_ptr<ome::xml::meta::OMEXMLMetadata> OMETiffImage::omeMetadata() const
-{
-    if (!d->reader)
-        return nullptr;
-
-    // We set up an OMEXMLMetadata store when opening the OME-TIFF file.
-    auto metaStore = d->reader->getMetadataStore();
-    return std::dynamic_pointer_cast<ome::xml::meta::OMEXMLMetadata>(metaStore);
-}
-
-static double floatQuantityToNm(
-    const ome::xml::model::primitives::
-        Quantity<ome::xml::model::enums::UnitsLength, ome::xml::model::primitives::PositiveFloat> &q)
-{
-    double value = q.getValue();
-    auto unit = q.getUnit();
-    if (unit == ome::xml::model::enums::UnitsLength::MICROMETER)
-        value *= 1000.0;
-    else if (unit == ome::xml::model::enums::UnitsLength::MILLIMETER)
-        value *= 1000000.0;
-    else if (unit == ome::xml::model::enums::UnitsLength::NANOMETER) { /* already nm */
-    } else if (unit == ome::xml::model::enums::UnitsLength::METER)
-        value *= 1e9;
-    return value;
-}
-
-ImageMetadata OMETiffImage::extractMetadata(dimension_size_type imageIndex) const
+ImageMetadata OMETiffImage::extractMetadata(dimension_size_type /*imageIndex*/) const
 {
     ImageMetadata meta;
 
-    if (!d->reader) {
-        qWarning().noquote() << "extractMetadata: No reader available";
+    if (!d->reader.isOpen()) {
+        qWarning().noquote() << "extractMetadata: No file open";
         return meta;
     }
 
-    std::shared_ptr<ome::xml::meta::MetadataRetrieve> retrieve;
-    auto metaStore = d->reader->getMetadataStore();
-    retrieve = std::dynamic_pointer_cast<ome::xml::meta::MetadataRetrieve>(metaStore);
+    if (d->reader.hasMetadata()) {
+        meta = d->reader.parsedMetadata();
+        if (meta.imageName.isEmpty())
+            meta.imageName = QFileInfo(d->currentFilename).fileName();
 
-    // check if real metadata is available, if not, fall back to basic info
-    bool metadataAvailable = std::dynamic_pointer_cast<ome::xml::meta::DummyMetadata>(metaStore) == nullptr;
-    if (!retrieve || !metadataAvailable) {
-        // Use dimensions which account for interleaving
-        meta.sizeX = static_cast<int>(d->sizeX);
-        meta.sizeY = static_cast<int>(d->sizeY);
-        meta.sizeZ = static_cast<int>(d->sizeZ);
-        meta.sizeC = static_cast<int>(d->sizeC);
-        meta.sizeT = static_cast<int>(d->sizeT);
-        meta.pixelType = QString::fromStdString(std::string(d->cachedPixelType));
-        QFileInfo fi(d->currentFilename);
-        meta.imageName = fi.fileName();
-        meta.dataSizeBytes = fi.size();
-
-        // Add empty channel params for each effective channel
-        for (int c = 0; c < meta.sizeC; ++c) {
-            ChannelParams chParams;
-            chParams.name = QStringLiteral("Channel %1").arg(c + 1);
-            meta.channels.push_back(chParams);
-        }
-        return meta;
-    }
-
-    using namespace ome::xml::model;
-
-    // Image name
-    try {
-        auto name = retrieve->getImageName(imageIndex);
-        meta.imageName = QString::fromStdString(name);
-    } catch (const std::exception &e) {
-        QFileInfo fi(d->currentFilename);
-        meta.imageName = fi.fileName();
-    }
-
-    // Dimensions
-    try {
-        meta.sizeX = static_cast<int>(retrieve->getPixelsSizeX(imageIndex));
-        meta.sizeY = static_cast<int>(retrieve->getPixelsSizeY(imageIndex));
-        meta.sizeZ = static_cast<int>(retrieve->getPixelsSizeZ(imageIndex));
-        meta.sizeC = static_cast<int>(retrieve->getPixelsSizeC(imageIndex));
-        meta.sizeT = static_cast<int>(retrieve->getPixelsSizeT(imageIndex));
-    } catch (const std::exception &e) {
-        qWarning().noquote() << "extractMetadata: Failed to get dimensions:" << e.what();
-    }
-
-    // Pixel type
-    try {
-        auto pt = retrieve->getPixelsType(imageIndex);
-        meta.pixelType = QString::fromStdString(std::string(pt));
-
-        // Calculate approximate data size
-        int bytesPerPixel = 1;
-        if (pt == enums::PixelType::UINT16 || pt == enums::PixelType::INT16)
-            bytesPerPixel = 2;
-        else if (pt == enums::PixelType::UINT32 || pt == enums::PixelType::INT32 || pt == enums::PixelType::FLOAT)
-            bytesPerPixel = 4;
-        else if (pt == enums::PixelType::DOUBLE)
-            bytesPerPixel = 8;
+        const size_t bytesPerPixel = omr::pixelTypeBytes(d->cachedPixelType);
         meta.dataSizeBytes = static_cast<size_t>(meta.sizeX) * meta.sizeY * meta.sizeZ * meta.sizeC * meta.sizeT
                              * bytesPerPixel;
-    } catch (const std::exception &e) {
-        qWarning().noquote() << "extractMetadata: Failed to get pixel type:" << e.what();
+        return meta;
     }
 
-    // Physical sizes (convert to nm)
-    try {
-        auto physX = retrieve->getPixelsPhysicalSizeX(imageIndex);
-        meta.physSizeXNm = floatQuantityToNm(physX);
-    } catch (const std::exception &e) {
+    // No embedded metadata (plain TIFF): use effective dimensions and basic info.
+    meta.sizeX = static_cast<int>(d->sizeX);
+    meta.sizeY = static_cast<int>(d->sizeY);
+    meta.sizeZ = static_cast<int>(d->sizeZ);
+    meta.sizeC = static_cast<int>(d->sizeC);
+    meta.sizeT = static_cast<int>(d->sizeT);
+    meta.pixelType = omr::pixelTypeToString(d->cachedPixelType);
+
+    QFileInfo fi(d->currentFilename);
+    meta.imageName = fi.fileName();
+    meta.dataSizeBytes = static_cast<size_t>(fi.size());
+
+    for (int c = 0; c < meta.sizeC; ++c) {
+        ChannelParams chParams;
+        chParams.name = QStringLiteral("Channel %1").arg(c + 1);
+        meta.channels.push_back(chParams);
     }
-
-    try {
-        auto physY = retrieve->getPixelsPhysicalSizeY(imageIndex);
-        meta.physSizeYNm = floatQuantityToNm(physY);
-    } catch (const std::exception &e) {
-    }
-
-    try {
-        auto physZ = retrieve->getPixelsPhysicalSizeZ(imageIndex);
-        meta.physSizeZNm = floatQuantityToNm(physZ);
-    } catch (const std::exception &e) {
-    }
-
-    // Objective/optical parameters from Instrument
-    try {
-        // Get objective settings from image
-        auto objectiveID = retrieve->getObjectiveSettingsID(imageIndex);
-
-        // Find the objective
-        auto instrumentCount = retrieve->getInstrumentCount();
-
-        for (dimension_size_type inst = 0; inst < instrumentCount; ++inst) {
-            auto objectiveCount = retrieve->getObjectiveCount(inst);
-
-            for (dimension_size_type obj = 0; obj < objectiveCount; ++obj) {
-                auto objID = retrieve->getObjectiveID(inst, obj);
-                if (objID != objectiveID)
-                    continue;
-
-                try {
-                    meta.numericalAperture = retrieve->getObjectiveLensNA(inst, obj);
-                } catch (const std::exception &e) {
-                }
-
-                try {
-                    meta.lensImmersion = retrieve->getObjectiveImmersion(inst, obj);
-                } catch (const std::exception &e) {
-                }
-                break;
-            }
-        }
-    } catch (const std::exception &e) {
-    }
-
-    // Refractive index
-    try {
-        meta.immersionRI = retrieve->getObjectiveSettingsRefractiveIndex(imageIndex);
-    } catch (const std::exception &e) {
-    }
-
-    // Medium
-    try {
-        meta.embeddingMedium = retrieve->getObjectiveSettingsMedium(imageIndex);
-    } catch (const std::exception &e) {
-    }
-
-    // Channel information
-    try {
-        auto channelCount = retrieve->getChannelCount(imageIndex);
-
-        for (dimension_size_type ch = 0; ch < channelCount; ++ch) {
-            ChannelParams chParams;
-
-            try {
-                chParams.name = QString::fromStdString(retrieve->getChannelName(imageIndex, ch));
-                qDebug() << "extractMetadata: Channel" << ch << "name:" << chParams.name;
-            } catch (const std::exception &e) {
-                chParams.name = QString("Channel %1").arg(ch);
-            }
-
-            try {
-                chParams.acquisitionMode = retrieve->getChannelAcquisitionMode(imageIndex, ch);
-                if (chParams.acquisitionMode == enums::AcquisitionMode::MULTIPHOTONMICROSCOPY)
-                    chParams.photonCount = 2; // Default assumption for multiphoton
-                qDebug() << "extractMetadata: Channel" << ch << "acquisition mode:" << chParams.acquisitionMode;
-            } catch (const std::exception &e) {
-                chParams.acquisitionMode = enums::AcquisitionMode::LASERSCANNINGCONFOCALMICROSCOPY;
-            }
-
-            try {
-                auto excWL = retrieve->getChannelExcitationWavelength(imageIndex, ch);
-                double value = excWL.getValue();
-                auto unit = excWL.getUnit();
-                // Convert to nm
-                if (unit == enums::UnitsLength::MICROMETER)
-                    value *= 1000.0;
-                else if (unit == enums::UnitsLength::METER)
-                    value *= 1e9;
-                chParams.exWavelengthNm = value;
-                qDebug() << "extractMetadata: Channel" << ch << "excitation:" << value << "nm";
-            } catch (const std::exception &e) {
-            }
-
-            try {
-                auto emWL = retrieve->getChannelEmissionWavelength(imageIndex, ch);
-                double value = emWL.getValue();
-                auto unit = emWL.getUnit();
-                // Convert to nm
-                if (unit == enums::UnitsLength::MICROMETER)
-                    value *= 1000.0;
-                else if (unit == enums::UnitsLength::METER)
-                    value *= 1e9;
-                chParams.emWavelengthNm = value;
-                qDebug() << "extractMetadata: Channel" << ch << "emission:" << value << "nm";
-            } catch (const std::exception &e) {
-            }
-
-            try {
-                auto pinhole = retrieve->getChannelPinholeSize(imageIndex, ch);
-                double value = pinhole.getValue();
-                auto unit = pinhole.getUnit();
-                // Convert to nm
-                if (unit == enums::UnitsLength::MICROMETER)
-                    value *= 1000.0;
-                else if (unit == enums::UnitsLength::METER)
-                    value *= 1e9;
-                chParams.pinholeSizeNm = value;
-                qDebug() << "extractMetadata: Channel" << ch << "pinhole:" << value << "nm";
-            } catch (const std::exception &e) {
-            }
-
-            meta.channels.push_back(chParams);
-        }
-    } catch (const std::exception &e) {
-        qWarning().noquote() << "extractMetadata: Error extracting channel information:" << e.what();
-    }
-
     return meta;
 }
 
@@ -919,236 +459,22 @@ std::expected<bool, QString> OMETiffImage::saveWithMetadata(
     const ImageMetadata &metadata,
     ProgressCallback progressCallback)
 {
-    if (!d->reader)
+    if (!d->reader.isOpen())
         return std::unexpected("No image data loaded");
 
-    try {
-        using namespace ome::xml::model;
-        using PositiveLength = primitives::Quantity<enums::UnitsLength, primitives::PositiveFloat>;
-        using Length = primitives::Quantity<enums::UnitsLength>;
-        using PositiveInteger = primitives::PositiveInteger;
+    auto planeIndexFn = [this](dimension_size_type z, dimension_size_type c, dimension_size_type t) {
+        return d->getPlaneIndex(z, c, t);
+    };
 
-        std::shared_ptr<ome::xml::meta::OMEXMLMetadata> modifiedMeta;
-        dimension_size_type imageIndex = 0;
-
-        // Check if we have valid source metadata
-        auto metaStore = d->reader->getMetadataStore();
-        auto sourceMetadata = std::dynamic_pointer_cast<ome::xml::meta::OMEXMLMetadata>(metaStore);
-        bool hasValidSourceMetadata = sourceMetadata
-                                      && std::dynamic_pointer_cast<ome::xml::meta::DummyMetadata>(metaStore) == nullptr;
-
-        if (hasValidSourceMetadata && d->isOmeTiff) {
-            // For OME-TIFF: Copy and modify existing metadata
-            modifiedMeta = std::make_shared<ome::xml::meta::OMEXMLMetadata>();
-            ome::xml::meta::convert(*sourceMetadata, *modifiedMeta);
-        } else {
-            // For raw TIFF: Create metadata from scratch using CoreMetadata helper
-            modifiedMeta = std::make_shared<ome::xml::meta::OMEXMLMetadata>();
-
-            // Create CoreMetadata to describe the image
-            std::vector<std::shared_ptr<ome::files::CoreMetadata>> seriesList;
-            auto core = std::make_shared<ome::files::CoreMetadata>();
-
-            core->sizeX = d->sizeX;
-            core->sizeY = d->sizeY;
-            core->sizeZ = d->sizeZ;
-            core->sizeT = d->sizeT;
-
-            // Set up channels
-            core->sizeC.clear();
-            for (dimension_size_type c = 0; c < d->sizeC; ++c) {
-                core->sizeC.push_back(1); // 1 sample per channel (grayscale channels)
-            }
-
-            core->pixelType = d->cachedPixelType;
-            core->interleaved = false;
-            core->dimensionOrder = enums::DimensionOrder::XYZCT;
-
-            // Calculate bits per pixel based on pixel type
-            switch (d->cachedPixelType) {
-            case PT::UINT8:
-            case PT::INT8:
-                core->bitsPerPixel = 8;
-                break;
-            case PT::UINT16:
-            case PT::INT16:
-                core->bitsPerPixel = 16;
-                break;
-            case PT::UINT32:
-            case PT::INT32:
-            case PT::FLOAT:
-                core->bitsPerPixel = 32;
-                break;
-            case PT::DOUBLE:
-                core->bitsPerPixel = 64;
-                break;
-            default:
-                core->bitsPerPixel = 8;
-            }
-
-            seriesList.push_back(core);
-
-            // Populate the OMEXMLMetadata
-            ome::files::fillMetadata(*modifiedMeta, seriesList);
-
-            // Set image name
-            if (!metadata.imageName.isEmpty())
-                modifiedMeta->setImageName(metadata.imageName.toStdString(), imageIndex);
-        }
-
-        // Update physical sizes (convert from nm to micrometers for OME standard)
-        if (metadata.physSizeXNm > 0) {
-            modifiedMeta->setPixelsPhysicalSizeX(
-                PositiveLength(metadata.physSizeXNm / 1000.0, enums::UnitsLength::MICROMETER), imageIndex);
-        }
-        if (metadata.physSizeYNm > 0) {
-            modifiedMeta->setPixelsPhysicalSizeY(
-                PositiveLength(metadata.physSizeYNm / 1000.0, enums::UnitsLength::MICROMETER), imageIndex);
-        }
-        if (metadata.physSizeZNm > 0) {
-            modifiedMeta->setPixelsPhysicalSizeZ(
-                PositiveLength(metadata.physSizeZNm / 1000.0, enums::UnitsLength::MICROMETER), imageIndex);
-        }
-
-        // Update objective settings (only for existing OME-TIFF with instrument data)
-        if (hasValidSourceMetadata && d->isOmeTiff) {
-            try {
-                if (metadata.immersionRI > 0)
-                    modifiedMeta->setObjectiveSettingsRefractiveIndex(metadata.immersionRI, imageIndex);
-                modifiedMeta->setObjectiveSettingsMedium(metadata.embeddingMedium, imageIndex);
-            } catch (...) {
-            }
-
-            // Update instrument/objective data
-            try {
-                auto objectiveID = modifiedMeta->getObjectiveSettingsID(imageIndex);
-                auto instrumentCount = modifiedMeta->getInstrumentCount();
-                for (dimension_size_type inst = 0; inst < instrumentCount; ++inst) {
-                    auto objectiveCount = modifiedMeta->getObjectiveCount(inst);
-                    for (dimension_size_type obj = 0; obj < objectiveCount; ++obj) {
-                        auto objID = modifiedMeta->getObjectiveID(inst, obj);
-                        if (objID == objectiveID) {
-                            if (metadata.numericalAperture > 0) {
-                                modifiedMeta->setObjectiveLensNA(metadata.numericalAperture, inst, obj);
-                            }
-                            modifiedMeta->setObjectiveImmersion(metadata.lensImmersion, inst, obj);
-                            break;
-                        }
-                    }
-                }
-            } catch (...) {
-            }
-        }
-
-        // Update channel information
-        for (size_t ch = 0; ch < metadata.channels.size(); ++ch) {
-            const auto &chParams = metadata.channels[ch];
-
-            try {
-                modifiedMeta->setChannelName(chParams.name.toStdString(), imageIndex, ch);
-            } catch (...) {
-            }
-
-            try {
-                modifiedMeta->setChannelAcquisitionMode(chParams.acquisitionMode, imageIndex, ch);
-            } catch (...) {
-            }
-
-            try {
-                if (chParams.exWavelengthNm > 0) {
-                    PositiveLength excWL(chParams.exWavelengthNm, enums::UnitsLength::NANOMETER);
-                    modifiedMeta->setChannelExcitationWavelength(excWL, imageIndex, ch);
-                }
-            } catch (...) {
-            }
-
-            try {
-                if (chParams.emWavelengthNm > 0) {
-                    PositiveLength emWL(chParams.emWavelengthNm, enums::UnitsLength::NANOMETER);
-                    modifiedMeta->setChannelEmissionWavelength(emWL, imageIndex, ch);
-                }
-            } catch (...) {
-            }
-
-            try {
-                if (chParams.pinholeSizeNm > 0) {
-                    Length pinhole(chParams.pinholeSizeNm, enums::UnitsLength::NANOMETER);
-                    modifiedMeta->setChannelPinholeSize(pinhole, imageIndex, ch);
-                }
-            } catch (...) {
-            }
-        }
-
-        // Create writer and write the file
-        auto writer = std::make_shared<ome::files::out::OMETIFFWriter>();
-        std::shared_ptr<ome::xml::meta::MetadataRetrieve> metaRetrieve = modifiedMeta;
-        writer->setMetadataRetrieve(metaRetrieve);
-
-        // Always use BigTIFF format to support large files (>4GB)
-        writer->setBigTIFF(true);
-
-        // Use interleaved (contiguous) storage
-        writer->setInterleaved(true);
-
-        // Use zlib compression for smaller file sizes
-        // A warning is emitted for "Deflate", recommending to use "AdobeDeflate" instead for wider support,
-        // and claiming "Deflate" was legacy. So we just use "AdobeDeflate", it's the same algorithm.
-        writer->setCompression("AdobeDeflate");
-
-        writer->setId(outputPath.toStdString());
-
-        // Write planes
-        writer->setSeries(0);
-        d->reader->setSeries(0);
-
-        if (!d->isOmeTiff && d->interleavedChannels > 1) {
-            // For interleaved raw TIFFs: write planes in the correct order for OME-TIFF
-            // OME-TIFF expects planes ordered by dimension order (XYZCT means Z varies fastest, then C, then T)
-            dimension_size_type outPlane = 0;
-            dimension_size_type totalPlanes = d->sizeT * d->sizeC * d->sizeZ;
-
-            for (dimension_size_type t = 0; t < d->sizeT; ++t) {
-                for (dimension_size_type c = 0; c < d->sizeC; ++c) {
-                    for (dimension_size_type z = 0; z < d->sizeZ; ++z) {
-                        if (progressCallback && !progressCallback(outPlane, totalPlanes)) {
-                            writer->close();
-                            return std::unexpected("Save operation cancelled by user");
-                        }
-
-                        // Get the raw plane index for this (z, c, t) combination
-                        dimension_size_type rawPlane = d->getPlaneIndex(z, c, t);
-
-                        VariantPixelBuffer buf;
-                        d->reader->openBytes(rawPlane, buf);
-                        writer->saveBytes(outPlane, buf);
-                        ++outPlane;
-                    }
-                }
-            }
-        } else {
-            // For OME-TIFF or non-interleaved: copy planes directly
-            dimension_size_type planeCount = d->reader->getImageCount();
-            for (dimension_size_type plane = 0; plane < planeCount; ++plane) {
-                if (progressCallback && !progressCallback(plane, planeCount)) {
-                    writer->close();
-                    return std::unexpected("Save operation cancelled by user");
-                }
-
-                VariantPixelBuffer buf;
-                d->reader->openBytes(plane, buf);
-                writer->saveBytes(plane, buf);
-            }
-        }
-
-        writer->close();
-
-        // Guard against ome-files omitting the XML declaration in the embedded OME-XML.
-        ensureXmlDeclaration(outputPath.toStdString());
-
-        qDebug() << "Successfully saved OME-TIFF with modified metadata to:" << outputPath;
-        return true;
-
-    } catch (const std::exception &e) {
-        return std::unexpected(QStringLiteral("Failed to save OME-TIFF: %1").arg(e.what()));
-    }
+    return omr::ometiffwriter::write(
+        outputPath,
+        d->reader,
+        metadata,
+        d->sizeZ,
+        d->sizeC,
+        d->sizeT,
+        d->cachedPixelType,
+        static_cast<unsigned int>(d->rgbChannelCount < 1 ? 1 : d->rgbChannelCount),
+        planeIndexFn,
+        progressCallback);
 }

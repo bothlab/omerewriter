@@ -12,16 +12,14 @@
 #include <expected>
 #include <functional>
 
-#include <ome/files/FormatReader.h>
-#include <ome/xml/meta/OMEXMLMetadata.h>
+#include "ometypes.h"
 
 /**
  * @brief Structure to hold channel-specific microscopy parameters
  */
 struct ChannelParams {
     QString name; /// channel name
-    ome::xml::model::enums::AcquisitionMode acquisitionMode =
-        ome::xml::model::enums::AcquisitionMode::LASERSCANNINGCONFOCALMICROSCOPY;
+    omr::AcquisitionMode acquisitionMode = omr::AcquisitionMode::LaserScanningConfocalMicroscopy;
     double exWavelengthNm = 0;
     double emWavelengthNm = 0;
     double pinholeSizeNm = 0;
@@ -50,8 +48,8 @@ struct ImageMetadata {
 
     // Optical parameters
     double numericalAperture = 0;
-    ome::xml::model::enums::Immersion lensImmersion = ome::xml::model::enums::Immersion::WATER;
-    ome::xml::model::enums::Medium embeddingMedium = ome::xml::model::enums::Medium::WATER;
+    omr::Immersion lensImmersion = omr::Immersion::Water;
+    omr::Medium embeddingMedium = omr::Medium::Water;
     double immersionRI = 1.0; /// Refractive index of the immersion medium
 
     // Channel parameters
@@ -89,7 +87,7 @@ class OMETiffImage : public QObject
     Q_OBJECT
 
 public:
-    using dimension_size_type = ome::files::dimension_size_type;
+    using dimension_size_type = omr::dimension_size_type;
 
     explicit OMETiffImage(QObject *parent = nullptr);
     ~OMETiffImage() override;
@@ -163,7 +161,7 @@ public:
     /**
      * @brief Get the pixel type of the image.
      */
-    [[nodiscard]] ome::xml::model::enums::PixelType pixelType() const;
+    [[nodiscard]] omr::PixelType pixelType() const;
 
     /**
      * @brief Get the number of RGB channels (typically 1 for grayscale, 3 for RGB).
@@ -199,16 +197,6 @@ public:
      * @return RawImage containing the plane data
      */
     [[nodiscard]] RawImage readPlaneByIndex(dimension_size_type planeIndex);
-
-    /**
-     * @brief Get the underlying reader.
-     */
-    [[nodiscard]] std::shared_ptr<ome::files::FormatReader> reader() const;
-
-    /**
-     * @brief Get the OME-XML metadata object.
-     */
-    [[nodiscard]] std::shared_ptr<ome::xml::meta::OMEXMLMetadata> omeMetadata() const;
 
     /**
      * @brief Extract metadata from the currently open image

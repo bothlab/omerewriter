@@ -12,21 +12,20 @@
 
 #include "utils.h"
 
-using namespace ome::xml::model;
-
-static QString acqModeDisplayName(enums::AcquisitionMode modeValue)
+static QString acqModeDisplayName(omr::AcquisitionMode modeValue)
 {
     static const QHash<int, QString> names = {
-        {enums::AcquisitionMode::LASERSCANNINGCONFOCALMICROSCOPY,    QStringLiteral("Laser-Scanning Confocal")   },
-        {enums::AcquisitionMode::MULTIPHOTONMICROSCOPY,              QStringLiteral("Multiphoton")               },
-        {enums::AcquisitionMode::NEARFIELDSCANNINGOPTICALMICROSCOPY, QStringLiteral("Near-field scanning (NSOM)")},
-        {enums::AcquisitionMode::SPINNINGDISKCONFOCAL,               QStringLiteral("Spinning Disk Confocal")    },
-        {enums::AcquisitionMode::SECONDHARMONICGENERATIONIMAGING,    QStringLiteral("Second Harmonic Generation")},
+        {static_cast<int>(omr::AcquisitionMode::LaserScanningConfocalMicroscopy),    QStringLiteral("Laser-Scanning Confocal")   },
+        {static_cast<int>(omr::AcquisitionMode::MultiPhotonMicroscopy),              QStringLiteral("Multiphoton")               },
+        {static_cast<int>(omr::AcquisitionMode::NearFieldScanningOpticalMicroscopy), QStringLiteral("Near-field scanning (NSOM)")},
+        {static_cast<int>(omr::AcquisitionMode::SpinningDiskConfocal),               QStringLiteral("Spinning Disk Confocal")    },
+        {static_cast<int>(omr::AcquisitionMode::SecondHarmonicGenerationImaging),    QStringLiteral("Second Harmonic Generation")},
     };
-    if (names.contains(modeValue))
-        return names.value(modeValue);
+    const int key = static_cast<int>(modeValue);
+    if (names.contains(key))
+        return names.value(key);
     // Fall back to the raw OME string
-    return QString::fromStdString(std::string(modeValue));
+    return omr::acquisitionModeToString(modeValue);
 }
 
 MicroscopeParamsWidget::MicroscopeParamsWidget(QWidget *parent)
@@ -37,16 +36,16 @@ MicroscopeParamsWidget::MicroscopeParamsWidget(QWidget *parent)
 
     // Set up combo box known values
     ui->comboMicroscopeType->clear();
-    for (auto v : enums::AcquisitionMode::values())
-        ui->comboMicroscopeType->addItem(acqModeDisplayName(v.first), v.first);
+    for (const auto &v : omr::acquisitionModeValues())
+        ui->comboMicroscopeType->addItem(acqModeDisplayName(v.first), static_cast<int>(v.first));
 
     ui->comboLensImmersion->clear();
-    for (auto v : enums::Immersion::values())
-        ui->comboLensImmersion->addItem(QString::fromStdString(v.second), v.first);
+    for (const auto &v : omr::immersionValues())
+        ui->comboLensImmersion->addItem(v.second, static_cast<int>(v.first));
 
     ui->comboEmbedding->clear();
-    for (auto v : enums::Medium::values())
-        ui->comboEmbedding->addItem(QString::fromStdString(v.second), v.first);
+    for (const auto &v : omr::mediumValues())
+        ui->comboEmbedding->addItem(v.second, static_cast<int>(v.first));
 
     // Set default (empty) values
     clearMetadata();
@@ -104,7 +103,7 @@ MicroscopeParamsWidget::MicroscopeParamsWidget(QWidget *parent)
         &MicroscopeParamsWidget::onMetadataFieldChanged);
     connect(ui->comboMicroscopeType, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int) {
         const bool isMultiphoton = ui->comboMicroscopeType->currentData().toInt()
-                                   == enums::AcquisitionMode::MULTIPHOTONMICROSCOPY;
+                                   == static_cast<int>(omr::AcquisitionMode::MultiPhotonMicroscopy);
         ui->groupMultiphoton->setEnabled(isMultiphoton);
         if (isMultiphoton && ui->spinPhotonCount->value() < 2)
             ui->spinPhotonCount->setValue(2); // Multiphoton typically involves 2 or more photons
@@ -178,11 +177,12 @@ void MicroscopeParamsWidget::setMetadata(const ImageMetadata &metadata)
     ui->spinNA->setValue(metadata.numericalAperture);
 
     // Lens immersion
-    ui->comboLensImmersion->setCurrentIndex(metadata.lensImmersion);
+    ui->comboLensImmersion->setCurrentIndex(
+        ui->comboLensImmersion->findData(static_cast<int>(metadata.lensImmersion)));
     ui->spinLensRI->setValue(metadata.immersionRI);
 
     // Embedding medium
-    ui->comboEmbedding->setCurrentIndex(metadata.embeddingMedium);
+    ui->comboEmbedding->setCurrentIndex(ui->comboEmbedding->findData(static_cast<int>(metadata.embeddingMedium)));
 
     // Populate channel list
     ui->listChannels->clear();
@@ -216,11 +216,11 @@ ImageMetadata MicroscopeParamsWidget::getMetadata() const
     meta.numericalAperture = ui->spinNA->value();
 
     // Lens immersion
-    meta.lensImmersion = enums::Immersion::enum_value(ui->comboLensImmersion->currentData().toInt());
+    meta.lensImmersion = static_cast<omr::Immersion>(ui->comboLensImmersion->currentData().toInt());
     meta.immersionRI = ui->spinLensRI->value();
 
     // Embedding medium
-    meta.embeddingMedium = enums::Medium::enum_value(ui->comboEmbedding->currentData().toInt());
+    meta.embeddingMedium = static_cast<omr::Medium>(ui->comboEmbedding->currentData().toInt());
 
     return meta;
 }
@@ -247,13 +247,14 @@ void MicroscopeParamsWidget::clearMetadata()
     ui->spinNA->setValue(0);
 
     // Mediums
-    ui->comboLensImmersion->setCurrentIndex(enums::Immersion::WATER);
+    ui->comboLensImmersion->setCurrentIndex(ui->comboLensImmersion->findData(static_cast<int>(omr::Immersion::Water)));
     ui->spinLensRI->setValue(1.0);
-    ui->comboEmbedding->setCurrentIndex(enums::Immersion::WATER);
+    ui->comboEmbedding->setCurrentIndex(ui->comboEmbedding->findData(static_cast<int>(omr::Medium::Water)));
 
     // Channels
     ui->listChannels->clear();
-    ui->comboMicroscopeType->setCurrentIndex(enums::AcquisitionMode::LASERSCANNINGCONFOCALMICROSCOPY);
+    ui->comboMicroscopeType->setCurrentIndex(
+        ui->comboMicroscopeType->findData(static_cast<int>(omr::AcquisitionMode::LaserScanningConfocalMicroscopy)));
     ui->groupMultiphoton->setEnabled(false);
     ui->editChannelLabel->clear();
     ui->spinPinholeNm->setValue(0);
@@ -313,7 +314,7 @@ void MicroscopeParamsWidget::updateChannelInList()
         const int modeValue = ui->comboMicroscopeType->currentData().toInt();
         const QString itemText = QString("%1: %2 - %3")
                                      .arg(row)
-                                     .arg(acqModeDisplayName(enums::AcquisitionMode::enum_value(modeValue)))
+                                     .arg(acqModeDisplayName(static_cast<omr::AcquisitionMode>(modeValue)))
                                      .arg(ui->editChannelLabel->text());
         ui->listChannels->item(row)->setText(itemText);
     }
@@ -329,8 +330,9 @@ void MicroscopeParamsWidget::updateChannelUI(int channelIndex)
     const auto &ch = m_metadata.channels[channelIndex];
 
     // Microscope type
-    ui->comboMicroscopeType->setCurrentIndex(ch.acquisitionMode);
-    ui->groupMultiphoton->setEnabled(ch.acquisitionMode == enums::AcquisitionMode::MULTIPHOTONMICROSCOPY);
+    ui->comboMicroscopeType->setCurrentIndex(
+        ui->comboMicroscopeType->findData(static_cast<int>(ch.acquisitionMode)));
+    ui->groupMultiphoton->setEnabled(ch.acquisitionMode == omr::AcquisitionMode::MultiPhotonMicroscopy);
     ui->spinPhotonCount->setValue(ch.photonCount);
 
     // Channel label
@@ -352,7 +354,7 @@ void MicroscopeParamsWidget::saveCurrentChannelData()
     auto &ch = m_metadata.channels[m_currentChannel];
 
     // Microscope type
-    ch.acquisitionMode = enums::AcquisitionMode::enum_value(ui->comboMicroscopeType->currentData().toInt());
+    ch.acquisitionMode = static_cast<omr::AcquisitionMode>(ui->comboMicroscopeType->currentData().toInt());
     ch.photonCount = ui->spinPhotonCount->value();
 
     // Channel label
