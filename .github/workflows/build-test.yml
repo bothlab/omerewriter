@@ -161,7 +161,7 @@ jobs:
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.5
         with:
           path: data/win-installer.iss
-          options: >-
+          options: |-
             /DAppVersion=${{ needs.get-version.outputs.version-numeric }}
             /DAppVersionNumeric=${{ needs.get-version.outputs.version-numeric }}
             /DDeployDir=..\install\OMERewriter
