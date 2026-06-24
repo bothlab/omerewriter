@@ -20,7 +20,7 @@ jobs:
       version-numeric: ${{ steps.version.outputs.version-numeric }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -42,7 +42,7 @@ jobs:
     name: Debian Testing
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Create Build Environment
         run: cd tests/ci/ && podman build -t omerewriter -f ./Dockerfile-debian-testing .
@@ -55,7 +55,7 @@ jobs:
     name: Ubuntu LTS
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Create Build Environment
       run: cd tests/ci/ && podman build -t omerewriter -f ./Dockerfile-ubuntu-lts .
@@ -73,7 +73,7 @@ jobs:
         shell: msys2 {0}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: msys2/setup-msys2@v2
         with:
